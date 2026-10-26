@@ -79,7 +79,7 @@
 - [x] 13b9b06 Task: Relaying status & cryptographic receipt card
   - [x] Display real-time relaying progress (simulating $\rightarrow$ broadcasting $\rightarrow$ confirmed)
   - [x] Render receipt card with Arc mainnet explorer link, actual gas cost, and attestation nonce
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 5: Advertiser Controls & System Finalization
 *Goal: Build advertiser campaign controls and run full integration verification after the core vertical slice is proven.*
