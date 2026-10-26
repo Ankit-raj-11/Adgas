@@ -67,9 +67,9 @@
 
 ## Phase 4: Consumer Payment Demo & Sponsored Video Ad UX
 *Goal: Build the responsive user-facing payment interface and video ad experience.*
-- [ ] Task: Next.js frontend scaffolding (`apps/web`)
-  - [ ] Setup Next.js 15 App Router with Tailwind CSS following the Deep Navy fintech visual guidelines
-  - [ ] Configure Wagmi / Viem provider with Arc mainnet parameters
+- [x] 7573606 Task: Next.js frontend scaffolding (`apps/web`)
+  - [x] Setup Next.js 15 App Router with Tailwind CSS following the Deep Navy fintech visual guidelines
+  - [x] Configure Wagmi / Viem provider with Arc mainnet parameters
 - [ ] Task: Sponsored video ad player component
   - [ ] Build video player with deterministic progress tracking, view completion hooks, and replay guards
 - [ ] Task: Payment transfer flow & client signing
