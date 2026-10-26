@@ -2,11 +2,11 @@
 
 ## Phase 0: Arc Mainnet Feasibility Gate & Valuation Verification
 *Goal: Autonomously verify live Arc mainnet infrastructure, EIP-3009 compatibility, and gas economic valuation before starting any application development.*
-- [ ] Task: Automated non-destructive Arc mainnet probe script
-  - [ ] Write script checking RPC latency, head block, and Arc mainnet Chain ID
-  - [ ] Query and inspect official Arc mainnet USDC bytecode and `DOMAIN_SEPARATOR`
-  - [ ] Verify EIP-3009 function selectors (`transferWithAuthorization`, `receiveWithAuthorization`, `authorizationState`)
-  - [ ] Query relayer EOA native Arc gas balance and report headroom
+- [x] Task: Automated non-destructive Arc mainnet probe script a9824b8
+  - [x] Write script checking RPC latency, head block, and Arc mainnet Chain ID
+  - [x] Query and inspect official Arc mainnet USDC bytecode and `DOMAIN_SEPARATOR`
+  - [x] Verify EIP-3009 function selectors (`transferWithAuthorization`, `receiveWithAuthorization`, `authorizationState`)
+  - [x] Query relayer EOA native Arc gas balance and report headroom
 - [ ] Task: Arc gas valuation research & verification
   - [ ] Verify how Arc native gas is economically valued against USDC (confirming whether 1:1 parity or an exchange rate applies)
   - [ ] Keep unit conversion separate from economic valuation, documenting the exact formula mapping native gas receipt cost to 6-decimal USDC
