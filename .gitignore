@@ -13,3 +13,4 @@ out/
 # Foundry
 contracts/out/
 contracts/cache/
+*.tsbuildinfo
