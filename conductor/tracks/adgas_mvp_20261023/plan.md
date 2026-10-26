@@ -54,9 +54,9 @@
 - [x] Task: Fastify relayer service scaffolding (`apps/relayer`) 75892ae
   - [x] Initialize Fastify server with health checks, error handlers, and Viem Arc client
   - [x] Configure primary and fallback RPC endpoints with automatic failover
-- [ ] Task: TDD - Attestation issuance endpoint
-  - [ ] Write failing tests for session verification, rate limits, and 5-minute TTL EIP-712 signatures
-  - [ ] Implement `POST /api/attestation/issue` signing typed data with relayer key
+- [x] Task: TDD - Attestation issuance endpoint cb548c4
+  - [x] Write failing tests for session verification, rate limits, and 5-minute TTL EIP-712 signatures
+  - [x] Implement `POST /api/attestation/issue` signing typed data with relayer key
 - [ ] Task: TDD - Transaction relaying endpoint
   - [ ] Write failing tests for authorization validation, contract state checks, simulation, persistence, raw broadcast, and receipt polling
   - [ ] Implement `POST /api/relay/transfer` executing pre-broadcast persistence, broadcast, receipt derivation, and settlement
