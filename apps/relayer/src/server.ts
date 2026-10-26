@@ -6,9 +6,11 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { createArcClient } from './client/arcClient.js';
 import { ARC_MAINNET_CHAIN_ID } from '@adgas/shared';
+import { attestationRoutes } from './routes/attestationRoutes.js';
 
 export interface BuildAppOptions {
   arcClient?: ReturnType<typeof createArcClient>;
+  db?: any;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -61,6 +63,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       },
       timestamp: new Date().toISOString(),
     };
+  });
+
+  // Register API Routes
+  app.register(attestationRoutes, {
+    relayerAccount: arc.relayerAccount,
+    db: options.db,
   });
 
   // Global Error Handler
