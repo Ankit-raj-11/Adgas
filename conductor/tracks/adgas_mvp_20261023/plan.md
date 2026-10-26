@@ -70,8 +70,8 @@
 - [x] 7573606 Task: Next.js frontend scaffolding (`apps/web`)
   - [x] Setup Next.js 15 App Router with Tailwind CSS following the Deep Navy fintech visual guidelines
   - [x] Configure Wagmi / Viem provider with Arc mainnet parameters
-- [ ] Task: Sponsored video ad player component
-  - [ ] Build video player with deterministic progress tracking, view completion hooks, and replay guards
+- [x] b9dc8ba Task: Sponsored video ad player component
+  - [x] Build video player with deterministic progress tracking, view completion hooks, and replay guards
 - [ ] Task: Payment transfer flow & client signing
   - [ ] Implement transfer input card with prominent "$0 Gas Sponsored" badge
   - [ ] Build explicit payment review card with fee coverage disclosure
