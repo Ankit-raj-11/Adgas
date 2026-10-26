@@ -18,9 +18,9 @@
 
 ## Phase 1: Workspace Scaffolding & Verified Conversion Utilities (TDD)
 *Goal: Initialize workspace and build unit-tested conversion math separating unit scaling from economic valuation.*
-- [ ] Task: Initialize pnpm/Turborepo workspace
-  - [ ] Scaffold `apps/web`, `apps/relayer`, `contracts/`, and `packages/shared`
-  - [ ] Configure root `tsconfig.json`, `pnpm-workspace.yaml`, and build scripts
+- [x] Task: Initialize pnpm/Turborepo workspace 4fa5ab7
+  - [x] Scaffold `apps/web`, `apps/relayer`, `contracts/`, and `packages/shared`
+  - [x] Configure root `tsconfig.json`, `pnpm-workspace.yaml`, and build scripts
 - [ ] Task: TDD - Decimal conversion & economic valuation library (`packages/shared`)
   - [ ] Write failing unit tests testing $10^{12}$ unit conversion and economic valuation math independently
   - [ ] Implement integer ceiling division for fractional gas costs and overflow protections
