@@ -7,6 +7,7 @@ import cors from '@fastify/cors';
 import { createArcClient } from './client/arcClient.js';
 import { ARC_MAINNET_CHAIN_ID } from '@adgas/shared';
 import { attestationRoutes } from './routes/attestationRoutes.js';
+import { relayRoutes } from './routes/relayRoutes.js';
 
 export interface BuildAppOptions {
   arcClient?: ReturnType<typeof createArcClient>;
@@ -68,6 +69,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   // Register API Routes
   app.register(attestationRoutes, {
     relayerAccount: arc.relayerAccount,
+    db: options.db,
+  });
+
+  app.register(relayRoutes, {
+    arcClient: arc,
     db: options.db,
   });
 
