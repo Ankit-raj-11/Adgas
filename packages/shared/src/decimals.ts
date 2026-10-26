@@ -5,6 +5,9 @@
  * Implements conservative integer ceiling division to prevent relayer fractional gas loss.
  */
 
+export const USDC_TOKEN_DECIMALS = 6;
+export const ARC_NATIVE_DECIMALS = 18;
+
 /**
  * 18 decimals (native Arc execution wei) vs 6 decimals (ERC-20 USDC standard).
  * 10^(18 - 6) = 10^12 = 1,000,000,000,000
