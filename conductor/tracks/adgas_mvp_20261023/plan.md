@@ -38,10 +38,10 @@
 - [x] Task: TDD - On-chain sponsor deposit verification 39359ab
   - [x] Write failing tests for deposit verification logic (verifying on-chain transaction receipt before crediting spendable campaign balance)
   - [x] Implement deposit ingestion service preventing phantom database-only balances
-- [ ] Task: TDD - Atomic reservation & receipt-based settlement engine
-  - [ ] Write failing tests for pre-broadcast budget reservation, overdraft prevention, and settlement math
-  - [ ] Reserve sufficient budget before broadcasting based on worst-case gas allowance
-  - [ ] Implement confirmation settlement: reconcile reserved budget against confirmed receipt gas cost, release unspent reserve, and prevent duplicate settlement
+- [x] Task: TDD - Atomic reservation & receipt-based settlement engine 0db0cdc
+  - [x] Write failing tests for pre-broadcast budget reservation, overdraft prevention, and settlement math
+  - [x] Reserve sufficient budget before broadcasting based on worst-case gas allowance
+  - [x] Implement confirmation settlement: reconcile reserved budget against confirmed receipt gas cost, release unspent reserve, and prevent duplicate settlement
 - [ ] Task: TDD - Pre-broadcast persistence, crash recovery & edge-case settlement
   - [ ] Write failing tests for pre-broadcast persistence, uncertain broadcast recovery, on-chain reverted tx gas accounting, dropped/replaced transactions, and RPC timeouts
   - [ ] Implement pre-broadcast persistence of a unique transaction attempt before transmitting
