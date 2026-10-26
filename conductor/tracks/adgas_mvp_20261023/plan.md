@@ -83,9 +83,9 @@
 
 ## Phase 5: Advertiser Controls & System Finalization
 *Goal: Build advertiser campaign controls and run full integration verification after the core vertical slice is proven.*
-- [ ] Task: Advertiser campaign management views (`apps/web`)
-  - [ ] Build campaign overview card showing balance, spend, and sponsored transfer counts
-  - [ ] Implement campaign creation flow with verified deposit tracking and pause/resume toggle
+- [x] 9afadef Task: Advertiser campaign management views (`apps/web`)
+  - [x] Build campaign overview card showing balance, spend, and sponsored transfer counts
+  - [x] Implement campaign creation flow with verified deposit tracking and pause/resume toggle
 - [ ] Task: Full system end-to-end regression validation
   - [ ] Run full regression suite across user payment and advertiser management flows
   - [ ] Verify all documentation, style guide conformance, and test coverage targets (>80%)
