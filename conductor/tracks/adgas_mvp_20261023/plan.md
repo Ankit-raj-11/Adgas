@@ -72,10 +72,10 @@
   - [x] Configure Wagmi / Viem provider with Arc mainnet parameters
 - [x] b9dc8ba Task: Sponsored video ad player component
   - [x] Build video player with deterministic progress tracking, view completion hooks, and replay guards
-- [ ] Task: Payment transfer flow & client signing
-  - [ ] Implement transfer input card with prominent "$0 Gas Sponsored" badge
-  - [ ] Build explicit payment review card with fee coverage disclosure
-  - [ ] Implement client-side EIP-3009 typed data signing (`transferWithAuthorization`)
+- [x] a2cb845 Task: Payment transfer flow & client signing
+  - [x] Implement transfer input card with prominent "$0 Gas Sponsored" badge
+  - [x] Build explicit payment review card with fee coverage disclosure
+  - [x] Implement client-side EIP-3009 typed data signing (`transferWithAuthorization`)
 - [ ] Task: Relaying status & cryptographic receipt card
   - [ ] Display real-time relaying progress (simulating $\rightarrow$ broadcasting $\rightarrow$ confirmed)
   - [ ] Render receipt card with Arc mainnet explorer link, actual gas cost, and attestation nonce
