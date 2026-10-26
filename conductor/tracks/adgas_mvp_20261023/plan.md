@@ -60,9 +60,9 @@
 - [x] Task: TDD - Transaction relaying endpoint 69ccf56
   - [x] Write failing tests for authorization validation, contract state checks, simulation, persistence, raw broadcast, and receipt polling
   - [x] Implement `POST /api/relay/transfer` executing pre-broadcast persistence, broadcast, receipt derivation, and settlement
-- [ ] Task: Vertical slice mainnet verification
-  - [ ] Execute the complete critical path: wallet EIP-3009 authorization $\rightarrow$ backend validation $\rightarrow$ relayer submission $\rightarrow$ confirmed Arc mainnet USDC transfer $\rightarrow$ accurate accounting
-  - [ ] Verify transaction hash on Arc block explorer and confirm zero ledger double-counting
+- [x] Task: Vertical slice mainnet verification 5fcd9b6
+  - [x] Execute the complete critical path: wallet EIP-3009 authorization $\rightarrow$ backend validation $\rightarrow$ relayer submission $\rightarrow$ confirmed Arc mainnet USDC transfer $\rightarrow$ accurate accounting
+  - [x] Verify transaction hash on Arc block explorer and confirm zero ledger double-counting
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Consumer Payment Demo & Sponsored Video Ad UX
