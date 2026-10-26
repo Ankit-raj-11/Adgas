@@ -21,10 +21,10 @@
 - [x] Task: Initialize pnpm/Turborepo workspace 4fa5ab7
   - [x] Scaffold `apps/web`, `apps/relayer`, `contracts/`, and `packages/shared`
   - [x] Configure root `tsconfig.json`, `pnpm-workspace.yaml`, and build scripts
-- [ ] Task: TDD - Decimal conversion & economic valuation library (`packages/shared`)
-  - [ ] Write failing unit tests testing $10^{12}$ unit conversion and economic valuation math independently
-  - [ ] Implement integer ceiling division for fractional gas costs and overflow protections
-  - [ ] Verify test suite passes with 100% boundary test coverage
+- [x] Task: TDD - Decimal conversion & economic valuation library (`packages/shared`) fd94f51
+  - [x] Write failing unit tests testing $10^{12}$ unit conversion and economic valuation math independently
+  - [x] Implement integer ceiling division for fractional gas costs and overflow protections
+  - [x] Verify test suite passes with 100% boundary test coverage
 - [ ] Task: Shared contracts & schemas (`packages/shared`)
   - [ ] Export verified USDC contract ABI and EIP-3009 typed data structures
   - [ ] Define shared TypeScript interfaces for campaigns, attestations, receipts, and EIP-712 schemas
