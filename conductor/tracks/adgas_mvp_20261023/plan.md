@@ -28,7 +28,7 @@
 - [x] Task: Shared contracts & schemas (`packages/shared`) c4b994e
   - [x] Export verified USDC contract ABI and EIP-3009 typed data structures
   - [x] Define shared TypeScript interfaces for campaigns, attestations, receipts, and EIP-712 schemas
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Verified Campaign Ingestion, Atomic Accounting & Crash Recovery (TDD)
 *Goal: Build the cloud PostgreSQL persistence layer with verified on-chain deposit ingestion, robust crash recovery, and failure-safe settlement.*
