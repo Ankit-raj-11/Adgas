@@ -5,6 +5,7 @@ import { VideoAdPlayer } from '../components/VideoAdPlayer';
 import { TransferForm } from '../components/TransferForm';
 import { ReceiptCard, RelayingStep, GasReceiptData } from '../components/ReceiptCard';
 import { WalletButton } from '../components/WalletButton';
+import { AdvertiserDashboard } from '../components/AdvertiserDashboard';
 import { submitRelayTransfer } from '../lib/transferClient';
 import { AdCompletionProof } from '../lib/adSession';
 import { Sparkles, Shield, Zap, Globe, ArrowRight, BarChart3, Coins } from 'lucide-react';
@@ -225,66 +226,9 @@ export default function HomePage() {
             </div>
           </div>
         ) : (
-          /* Advertiser Portal View Preview (Phase 5 Anchor) */
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-[#111827] border border-gray-800 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center justify-between pb-4 border-b border-gray-800 mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                    <Coins className="w-5 h-5 text-blue-400" />
-                    Advertiser Campaign Management
-                  </h2>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Fund campaign gas pools, set per-tx caps, and track verified consumer engagements.
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
-                  <span>Phase 5 Preview</span>
-                </div>
-              </div>
-
-              {/* Overview Metrics Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-                <div className="p-4 rounded-xl bg-[#0B0F19] border border-gray-800">
-                  <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Active Campaign</div>
-                  <div className="text-base font-bold text-white mt-1">Circle & Arc Foundation</div>
-                  <div className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Active
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-[#0B0F19] border border-gray-800">
-                  <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Funded Budget</div>
-                  <div className="text-base font-bold font-mono text-white mt-1">500.00 USDC</div>
-                  <div className="text-[11px] text-gray-500 mt-1">Verified on-chain</div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-[#0B0F19] border border-gray-800">
-                  <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Available Gas Pool</div>
-                  <div className="text-base font-bold font-mono text-emerald-400 mt-1">488.75 USDC</div>
-                  <div className="text-[11px] text-gray-500 mt-1">Ready for subsidies</div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-[#0B0F19] border border-gray-800">
-                  <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Sponsored Transfers</div>
-                  <div className="text-base font-bold font-mono text-blue-400 mt-1">142 Tx</div>
-                  <div className="text-[11px] text-gray-500 mt-1">100% completion rate</div>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 flex items-center justify-between text-xs">
-                <div className="text-gray-300">
-                  Ready to test the live user payment flow with $0 gas?
-                </div>
-                <button
-                  onClick={() => setActiveTab('consumer')}
-                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
-                >
-                  <span>Go to Payment Demo</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+          /* Advertiser Portal View */
+          <div className="max-w-5xl mx-auto">
+            <AdvertiserDashboard />
           </div>
         )}
       </main>

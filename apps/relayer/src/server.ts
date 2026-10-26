@@ -8,6 +8,7 @@ import { createArcClient } from './client/arcClient.js';
 import { ARC_MAINNET_CHAIN_ID } from '@adgas/shared';
 import { attestationRoutes } from './routes/attestationRoutes.js';
 import { relayRoutes } from './routes/relayRoutes.js';
+import { campaignRoutes } from './routes/campaignRoutes.js';
 
 export interface BuildAppOptions {
   arcClient?: ReturnType<typeof createArcClient>;
@@ -73,6 +74,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.register(relayRoutes, {
+    arcClient: arc,
+    db: options.db,
+  });
+
+  app.register(campaignRoutes, {
     arcClient: arc,
     db: options.db,
   });
