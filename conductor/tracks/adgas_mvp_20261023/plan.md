@@ -25,9 +25,9 @@
   - [x] Write failing unit tests testing $10^{12}$ unit conversion and economic valuation math independently
   - [x] Implement integer ceiling division for fractional gas costs and overflow protections
   - [x] Verify test suite passes with 100% boundary test coverage
-- [ ] Task: Shared contracts & schemas (`packages/shared`)
-  - [ ] Export verified USDC contract ABI and EIP-3009 typed data structures
-  - [ ] Define shared TypeScript interfaces for campaigns, attestations, receipts, and EIP-712 schemas
+- [x] Task: Shared contracts & schemas (`packages/shared`) c4b994e
+  - [x] Export verified USDC contract ABI and EIP-3009 typed data structures
+  - [x] Define shared TypeScript interfaces for campaigns, attestations, receipts, and EIP-712 schemas
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Verified Campaign Ingestion, Atomic Accounting & Crash Recovery (TDD)
