@@ -32,9 +32,9 @@
 
 ## Phase 2: Verified Campaign Ingestion, Atomic Accounting & Crash Recovery (TDD)
 *Goal: Build the cloud PostgreSQL persistence layer with verified on-chain deposit ingestion, robust crash recovery, and failure-safe settlement.*
-- [ ] Task: Drizzle ORM schema configuration (`apps/relayer`)
-  - [ ] Define schemas for `campaigns`, `deposits`, `attestations`, and `transactions`
-  - [ ] Configure database connection string handling via `DATABASE_URL`
+- [x] Task: Drizzle ORM schema configuration (`apps/relayer`) 68a2d6f
+  - [x] Define schemas for `campaigns`, `deposits`, `attestations`, and `transactions`
+  - [x] Configure database connection string handling via `DATABASE_URL`
 - [ ] Task: TDD - On-chain sponsor deposit verification
   - [ ] Write failing tests for deposit verification logic (verifying on-chain transaction receipt before crediting spendable campaign balance)
   - [ ] Implement deposit ingestion service preventing phantom database-only balances
