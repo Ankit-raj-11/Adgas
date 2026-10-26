@@ -51,9 +51,9 @@
 
 ## Phase 3: Core Vertical Slice - Relayer Execution & End-to-End Flow (TDD)
 *Goal: Prioritize and verify the single critical flow (wallet EIP-3009 authorization -> backend validation -> relayer submission -> confirmed Arc mainnet USDC transfer -> accurate accounting) before building dashboard polish.*
-- [ ] Task: Fastify relayer service scaffolding (`apps/relayer`)
-  - [ ] Initialize Fastify server with health checks, error handlers, and Viem Arc client
-  - [ ] Configure primary and fallback RPC endpoints with automatic failover
+- [x] Task: Fastify relayer service scaffolding (`apps/relayer`) 75892ae
+  - [x] Initialize Fastify server with health checks, error handlers, and Viem Arc client
+  - [x] Configure primary and fallback RPC endpoints with automatic failover
 - [ ] Task: TDD - Attestation issuance endpoint
   - [ ] Write failing tests for session verification, rate limits, and 5-minute TTL EIP-712 signatures
   - [ ] Implement `POST /api/attestation/issue` signing typed data with relayer key
