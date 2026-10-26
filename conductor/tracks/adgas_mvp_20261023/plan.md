@@ -86,7 +86,7 @@
 - [x] 9afadef Task: Advertiser campaign management views (`apps/web`)
   - [x] Build campaign overview card showing balance, spend, and sponsored transfer counts
   - [x] Implement campaign creation flow with verified deposit tracking and pause/resume toggle
-- [ ] Task: Full system end-to-end regression validation
-  - [ ] Run full regression suite across user payment and advertiser management flows
-  - [ ] Verify all documentation, style guide conformance, and test coverage targets (>80%)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Full system end-to-end regression validation
+  - [x] Run full regression suite across user payment and advertiser management flows
+  - [x] Verify all documentation, style guide conformance, and test coverage targets (>80%)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
