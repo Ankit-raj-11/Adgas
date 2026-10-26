@@ -47,7 +47,7 @@
   - [x] Implement pre-broadcast persistence of a unique transaction attempt before transmitting
   - [x] Implement startup reconciliation scanning pending transactions against Arc mainnet to resolve uncertain broadcast outcomes
   - [x] Account for reverted transactions that still consume on-chain gas, settling actual gas burned up to the capped limit
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Core Vertical Slice - Relayer Execution & End-to-End Flow (TDD)
 *Goal: Prioritize and verify the single critical flow (wallet EIP-3009 authorization -> backend validation -> relayer submission -> confirmed Arc mainnet USDC transfer -> accurate accounting) before building dashboard polish.*
