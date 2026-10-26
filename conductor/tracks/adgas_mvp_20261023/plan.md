@@ -10,10 +10,10 @@
 - [x] Task: Arc gas valuation research & verification ddc69c4
   - [x] Verify how Arc native gas is economically valued against USDC (confirming whether 1:1 parity or an exchange rate applies)
   - [x] Keep unit conversion separate from economic valuation, documenting the exact formula mapping native gas receipt cost to 6-decimal USDC
-- [ ] Task: Guarded micro-transfer probe
-  - [ ] Implement interactive CLI prompt requiring explicit manual user confirmation of recipient and micro-amount (e.g., 0.01 USDC)
-  - [ ] Execute single probe transfer on Arc mainnet; record explorer receipt (strictly omitted from automated CI)
-  - [ ] Enforce stop-the-line criterion: halt and revise architecture immediately if any critical check fails
+- [x] Task: Guarded micro-transfer probe cb57341
+  - [x] Implement interactive CLI prompt requiring explicit manual user confirmation of recipient and micro-amount (e.g., 0.01 USDC)
+  - [x] Execute single probe transfer on Arc mainnet; record explorer receipt (strictly omitted from automated CI)
+  - [x] Enforce stop-the-line criterion: halt and revise architecture immediately if any critical check fails
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 1: Workspace Scaffolding & Verified Conversion Utilities (TDD)
