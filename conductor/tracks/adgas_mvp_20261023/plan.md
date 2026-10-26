@@ -76,9 +76,9 @@
   - [x] Implement transfer input card with prominent "$0 Gas Sponsored" badge
   - [x] Build explicit payment review card with fee coverage disclosure
   - [x] Implement client-side EIP-3009 typed data signing (`transferWithAuthorization`)
-- [ ] Task: Relaying status & cryptographic receipt card
-  - [ ] Display real-time relaying progress (simulating $\rightarrow$ broadcasting $\rightarrow$ confirmed)
-  - [ ] Render receipt card with Arc mainnet explorer link, actual gas cost, and attestation nonce
+- [x] 13b9b06 Task: Relaying status & cryptographic receipt card
+  - [x] Display real-time relaying progress (simulating $\rightarrow$ broadcasting $\rightarrow$ confirmed)
+  - [x] Render receipt card with Arc mainnet explorer link, actual gas cost, and attestation nonce
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 5: Advertiser Controls & System Finalization
