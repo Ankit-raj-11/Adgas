@@ -1,0 +1,17 @@
+{
+  "name": "adgas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Advertising-sponsored gas abstraction platform on Arc mainnet",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@10.30.2"
+}
