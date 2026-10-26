@@ -42,11 +42,11 @@
   - [x] Write failing tests for pre-broadcast budget reservation, overdraft prevention, and settlement math
   - [x] Reserve sufficient budget before broadcasting based on worst-case gas allowance
   - [x] Implement confirmation settlement: reconcile reserved budget against confirmed receipt gas cost, release unspent reserve, and prevent duplicate settlement
-- [ ] Task: TDD - Pre-broadcast persistence, crash recovery & edge-case settlement
-  - [ ] Write failing tests for pre-broadcast persistence, uncertain broadcast recovery, on-chain reverted tx gas accounting, dropped/replaced transactions, and RPC timeouts
-  - [ ] Implement pre-broadcast persistence of a unique transaction attempt before transmitting
-  - [ ] Implement startup reconciliation scanning pending transactions against Arc mainnet to resolve uncertain broadcast outcomes
-  - [ ] Account for reverted transactions that still consume on-chain gas, settling actual gas burned up to the capped limit
+- [x] Task: TDD - Pre-broadcast persistence, crash recovery & edge-case settlement ce905f3
+  - [x] Write failing tests for pre-broadcast persistence, uncertain broadcast recovery, on-chain reverted tx gas accounting, dropped/replaced transactions, and RPC timeouts
+  - [x] Implement pre-broadcast persistence of a unique transaction attempt before transmitting
+  - [x] Implement startup reconciliation scanning pending transactions against Arc mainnet to resolve uncertain broadcast outcomes
+  - [x] Account for reverted transactions that still consume on-chain gas, settling actual gas burned up to the capped limit
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Core Vertical Slice - Relayer Execution & End-to-End Flow (TDD)
