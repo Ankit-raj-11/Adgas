@@ -1,4 +1,4 @@
-import { eq, or, inArray, and, gt } from 'drizzle-orm';
+import { eq, or, inArray, and, gt, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema.js';
@@ -37,7 +37,7 @@ export class PostgresDatabase {
     }
   }
 
-  private mapCampaign(c: typeof schema.campaigns.$inferSelect) {
+  private mapCampaign(c: typeof schema.campaigns.$inferSelect, sponsoredTxCount: number = 0) {
     const totalFunded = BigInt(c.totalFundedUsdc || '0');
     const available = BigInt(c.availableBalanceUsdc || '0');
     const reserved = BigInt(c.reservedBalanceUsdc || '0');
@@ -56,13 +56,32 @@ export class PostgresDatabase {
       reservedBalanceUsdc: reserved,
       settledSpendUsdc: settled,
       maxGasPerTxUsdc: maxGas,
-      sponsoredTxCount: 0,
+      sponsoredTxCount,
     };
   }
 
   async listCampaigns() {
     const rows = await this.db.select().from(schema.campaigns);
-    return rows.map((r) => this.mapCampaign(r));
+    const countMap = new Map<string, number>();
+    try {
+      const txCounts = await this.db
+        .select({
+          campaignId: schema.transactions.campaignId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(schema.transactions)
+        .groupBy(schema.transactions.campaignId);
+
+      for (const t of txCounts) {
+        if (t.campaignId) {
+          countMap.set(t.campaignId, Number(t.count));
+        }
+      }
+    } catch {
+      // ignore if query fails
+    }
+
+    return rows.map((r) => this.mapCampaign(r, countMap.get(r.id) || 0));
   }
 
   async getCampaign(id: string) {
@@ -79,7 +98,21 @@ export class PostgresDatabase {
       });
     }
     if (!matched) return null;
-    return this.mapCampaign(matched);
+
+    let count = 0;
+    try {
+      const txRows = await this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(schema.transactions)
+        .where(eq(schema.transactions.campaignId, matched.id));
+      if (txRows.length > 0) {
+        count = Number(txRows[0].count);
+      }
+    } catch {
+      // ignore
+    }
+
+    return this.mapCampaign(matched, count);
   }
 
   async createCampaign(camp: any) {
