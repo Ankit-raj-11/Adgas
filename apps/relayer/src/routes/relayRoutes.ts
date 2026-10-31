@@ -1,5 +1,14 @@
 import { type FastifyPluginAsync } from 'fastify';
-import { isAddress } from 'viem';
+import {
+  isAddress,
+  getAddress,
+  isHex,
+  padHex,
+  stringToHex,
+  stringToBytes,
+  keccak256,
+  parseSignature,
+} from 'viem';
 import {
   ARC_USDC_ADDRESS,
   USDC_EIP3009_ABI,
@@ -9,6 +18,24 @@ import {
 } from '@adgas/shared';
 import { CampaignAccountingEngine } from '../services/accountingEngine.js';
 import { TransactionRecoveryManager } from '../services/recoveryManager.js';
+
+/**
+ * Utility to convert arbitrary string or hex to valid bytes32 (66 chars, 0x-prefixed)
+ */
+function toBytes32(val: string): `0x${string}` {
+  if (!val) return '0x0000000000000000000000000000000000000000000000000000000000000000';
+  if (val.startsWith('0x') && val.length === 66 && isHex(val)) {
+    return val as `0x${string}`;
+  }
+  if (isHex(val)) {
+    return padHex(val as `0x${string}`, { size: 32, dir: 'right' });
+  }
+  const hex = stringToHex(val);
+  if (hex.length <= 66) {
+    return padHex(hex as `0x${string}`, { size: 32, dir: 'right' });
+  }
+  return keccak256(stringToBytes(val));
+}
 
 export interface RelayRouteOptions {
   arcClient: any;
@@ -88,7 +115,10 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
 
     // 1. Attestation Verification
     let attestation = db?.getAttestation ? await db.getAttestation(attestationNonce) : null;
-    if (!attestation && reqAttestation) {
+    if (attestation && reqAttestation) {
+      // Keep DB record status while hydrating all full typed parameters & signature fields
+      attestation = { ...reqAttestation, ...attestation };
+    } else if (!attestation && reqAttestation) {
       attestation = reqAttestation;
     }
 
@@ -97,6 +127,18 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
         error: 'AttestationError',
         message: 'INVALID_ATTESTATION: Attestation not found or already consumed',
       });
+    }
+
+    // Hydrate signature components (v, r, s) if missing
+    if (attestation.signature && (!attestation.r || !attestation.s)) {
+      try {
+        const parsedSig = parseSignature(attestation.signature);
+        attestation.v = Number(parsedSig.v ?? (27n + BigInt(parsedSig.yParity ?? 0)));
+        attestation.r = parsedSig.r;
+        attestation.s = parsedSig.s;
+      } catch {
+        // signature may already be split
+      }
     }
 
     const nowSec = Math.floor(Date.now() / 1000);
@@ -145,6 +187,11 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
       });
     }
 
+    // Format IDs for on-chain Solidity bytes32 vs DB string lookup
+    const rawCampaignId = attestation.campaignIdBytes32 || attestation.campaignId || reqCampaignId || '';
+    const campaignIdBytes32 = toBytes32(rawCampaignId);
+    const dbCampaignId = attestation.originalCampaignId || attestation.campaignId || reqCampaignId;
+
     // 5. Pre-flight Gas Reservation
     const gasLimit = 150_000n; // Standard allowance for vault execution + transfer
     const maxFeePerGas = 25_000_000_000n; // 25 Gwei
@@ -152,7 +199,7 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
     let reservation;
     try {
       reservation = await accountingEngine.reserveGas({
-        campaignId: attestation.campaignId,
+        campaignId: dbCampaignId,
         gasLimit,
         maxFeePerGas,
       });
@@ -166,43 +213,43 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
     // 6. Pre-Broadcast Persistence
     const attempt = await recoveryManager.createPreBroadcastAttempt({
       attestationNonce,
-      campaignId: attestation.campaignId,
-      userAddress: from,
-      recipientAddress: attestation.recipient || attestation.recipientAddress,
+      campaignId: dbCampaignId,
+      userAddress: getAddress(from),
+      recipientAddress: getAddress(attestation.recipient || attestation.recipientAddress),
       amountUsdc: BigInt(value),
       relayerAddress: arcClient.relayerAccount?.address || '0x0000000000000000000000000000000000000000',
       relayerNonce: 0,
       reservedCostUsdc: reservation.reservedCostUsdc,
     });
 
-    // 7. Prepare On-Chain Vault Tuples
+    // 7. Prepare On-Chain Vault Tuples with strict bytes32 and address normalization
     const authTuple = {
-      from: from as `0x${string}`,
-      to: (vaultAddress || to) as `0x${string}`,
+      from: getAddress(from) as `0x${string}`,
+      to: (vaultAddress || getAddress(to)) as `0x${string}`,
       value: BigInt(value),
       validAfter: BigInt(validAfter),
       validBefore: BigInt(validBefore),
-      nonce: nonce as `0x${string}`,
+      nonce: (nonce.startsWith('0x') && nonce.length === 66 ? nonce : toBytes32(nonce)) as `0x${string}`,
       v: Number(v),
-      r: r as `0x${string}`,
-      s: s as `0x${string}`,
+      r: (r.startsWith('0x') && r.length === 66 ? r : toBytes32(r)) as `0x${string}`,
+      s: (s.startsWith('0x') && s.length === 66 ? s : toBytes32(s)) as `0x${string}`,
     };
 
     const attestationTuple = {
-      campaignId: (attestation.campaignIdBytes32 || attestation.campaignId) as `0x${string}`,
-      user: (attestation.user || attestation.userAddress) as `0x${string}`,
-      recipient: (attestation.recipient || attestation.recipientAddress) as `0x${string}`,
+      campaignId: campaignIdBytes32,
+      user: getAddress(attestation.user || attestation.userAddress) as `0x${string}`,
+      recipient: getAddress(attestation.recipient || attestation.recipientAddress) as `0x${string}`,
       amountUsdc: BigInt(attestation.amountUsdc || attestation.amountUsdcUnits),
-      userNonce: (attestation.userNonce || nonce) as `0x${string}`,
+      userNonce: toBytes32(attestation.userNonce || nonce),
       validAfter: BigInt(attestation.validAfter ?? validAfter),
       validBefore: BigInt(attestation.validBefore ?? validBefore),
       maxGasReimbursementUsdc: BigInt(attestation.maxGasReimbursementUsdc || 50_000),
       expiry: BigInt(expiryTimestamp),
-      attestationNonce: (attestation.attestationNonce || attestation.nonce) as `0x${string}`,
-      relayer: (attestation.relayer || arcClient.relayerAccount?.address) as `0x${string}`,
+      attestationNonce: toBytes32(attestation.attestationNonce || attestation.nonce || attestationNonce),
+      relayer: getAddress(attestation.relayer || arcClient.relayerAccount?.address) as `0x${string}`,
       v: Number(attestation.v ?? 27),
-      r: (attestation.r || '0x' + '0'.repeat(64)) as `0x${string}`,
-      s: (attestation.s || '0x' + '0'.repeat(64)) as `0x${string}`,
+      r: (attestation.r && attestation.r.startsWith('0x') && attestation.r.length === 66 ? attestation.r : toBytes32(attestation.r || '0x0')) as `0x${string}`,
+      s: (attestation.s && attestation.s.startsWith('0x') && attestation.s.length === 66 ? attestation.s : toBytes32(attestation.s || '0x0')) as `0x${string}`,
     };
 
     // 8. Simulation on Arc Mainnet via AdgasSponsorVault.executeSponsoredTransfer
@@ -211,7 +258,7 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
         address: vaultAddress,
         abi: ADGAS_VAULT_ABI,
         functionName: 'executeSponsoredTransfer',
-        args: [attestationTuple.campaignId, authTuple, attestationTuple],
+        args: [campaignIdBytes32, authTuple, attestationTuple],
         account: arcClient.relayerAccount,
       });
     } catch (simErr: any) {
@@ -219,7 +266,7 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
         await db.consumeAttestation(attestationNonce);
       }
       await accountingEngine.releaseReservation({
-        campaignId: attestation.campaignId,
+        campaignId: dbCampaignId,
         reservationId: reservation.reservationId,
         reservedCostUsdc: reservation.reservedCostUsdc,
       });
@@ -241,7 +288,7 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
         address: vaultAddress,
         abi: ADGAS_VAULT_ABI,
         functionName: 'executeSponsoredTransfer',
-        args: [attestationTuple.campaignId, authTuple, attestationTuple],
+        args: [campaignIdBytes32, authTuple, attestationTuple],
         account: arcClient.relayerAccount,
       });
 
@@ -251,7 +298,7 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
         await db.consumeAttestation(attestationNonce);
       }
       await accountingEngine.releaseReservation({
-        campaignId: attestation.campaignId,
+        campaignId: dbCampaignId,
         reservationId: reservation.reservationId,
         reservedCostUsdc: reservation.reservedCostUsdc,
       });
@@ -272,7 +319,7 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
     const blockNumber = BigInt(receipt.blockNumber);
 
     const settlement = await accountingEngine.settleGas({
-      campaignId: attestation.campaignId,
+      campaignId: dbCampaignId,
       reservationId: reservation.reservationId,
       reservedCostUsdc: reservation.reservedCostUsdc,
       gasUsed,
