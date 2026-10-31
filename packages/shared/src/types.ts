@@ -87,7 +87,7 @@ export interface SponsorshipReceipt {
 export const ADGAS_ATTESTATION_DOMAIN = {
   name: 'AdgasProtocol',
   version: '1',
-  chainId: 5042,
+  chainId: ARC_MAINNET_CHAIN_ID,
 } as const;
 
 export const ADGAS_ATTESTATION_TYPES = {
@@ -120,7 +120,7 @@ export const SPONSORSHIP_ATTESTATION_TYPES = {
   ],
 } as const;
 
-export const getAdgasVaultDomain = (verifyingContract: `0x${string}`, chainId: number = 5042) => ({
+export const getAdgasVaultDomain = (verifyingContract: `0x${string}`, chainId: number = ARC_MAINNET_CHAIN_ID) => ({
   name: 'AdgasProtocol',
   version: '1',
   chainId,
@@ -163,11 +163,15 @@ export interface BuildReceiveWithAuthorizationParams {
   validAfter: bigint;
   validBefore: bigint;
   nonce: `0x${string}`;
+  chainId?: number;
 }
 
 export function buildReceiveWithAuthorizationTypedData(params: BuildReceiveWithAuthorizationParams) {
   return {
-    domain: EIP3009_DOMAIN,
+    domain: {
+      ...EIP3009_DOMAIN,
+      chainId: params.chainId || EIP3009_DOMAIN.chainId,
+    },
     types: {
       ReceiveWithAuthorization: EIP3009_TYPES.ReceiveWithAuthorization,
     },

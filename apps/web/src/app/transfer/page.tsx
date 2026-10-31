@@ -33,7 +33,7 @@ export default function TransferPage() {
   const [receiptData, setReceiptData] = useState<GasReceiptData | null>(null);
   const [relayError, setRelayError] = useState<string | null>(null);
 
-  const baseUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
+  const baseUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://adgas.onrender.com';
 
   // Fetch real active campaign from Relayer API
   useEffect(() => {

@@ -41,7 +41,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       ? new PostgresDatabase(process.env.DATABASE_URL)
       : new MemoryDatabase());
   const vaultAddress =
-    options.vaultAddress !== undefined
+    'vaultAddress' in options
       ? options.vaultAddress
       : ((process.env.ADGAS_VAULT_ADDRESS as `0x${string}`) || ADGAS_VAULT_ADDRESS);
 

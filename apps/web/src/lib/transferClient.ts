@@ -130,7 +130,7 @@ export async function requestGasAttestation(params: {
   validAfter?: number;
   validBefore?: number;
 }): Promise<any> {
-  const baseUrl = params.relayerUrl || process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
+  const baseUrl = params.relayerUrl || process.env.NEXT_PUBLIC_RELAYER_URL || 'https://adgas.onrender.com';
   const response = await fetch(`${baseUrl}/api/attestation/issue`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -185,7 +185,7 @@ export async function submitRelayTransfer(params: {
     actualGasCostUsdcUnits: string;
   };
 }> {
-  const baseUrl = params.relayerUrl || process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
+  const baseUrl = params.relayerUrl || process.env.NEXT_PUBLIC_RELAYER_URL || 'https://adgas.onrender.com';
   const response = await fetch(`${baseUrl}/api/relay/transfer`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

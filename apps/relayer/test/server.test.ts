@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { buildApp } from '../src/server.js';
+import { ARC_MAINNET_CHAIN_ID } from '@adgas/shared';
 
 describe('Fastify Relayer Server Scaffolding & Health Probe', () => {
   it('returns healthy status with chain metadata when RPC is connected', async () => {
@@ -24,7 +25,7 @@ describe('Fastify Relayer Server Scaffolding & Health Probe', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.status).toBe('healthy');
-    expect(body.chainId).toBe(5042);
+    expect(body.chainId).toBe(ARC_MAINNET_CHAIN_ID);
     expect(body.rpcConnected).toBe(true);
     expect(body.headBlock).toBe('27939100');
     expect(body.relayer.address).toBe('0x9999999999999999999999999999999999999999');

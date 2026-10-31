@@ -6,26 +6,26 @@ declare const process: any;
 
 export const ARC_MAINNET_CHAIN_ID = (typeof process !== 'undefined' && process?.env && (process.env.ARC_CHAIN_ID || process.env.NEXT_PUBLIC_ARC_CHAIN_ID))
   ? Number(process.env.ARC_CHAIN_ID || process.env.NEXT_PUBLIC_ARC_CHAIN_ID)
-  : 5042;
+  : 5042002;
 
 export const ARC_MAINNET_RPC = (typeof process !== 'undefined' && process?.env && (process.env.ARC_RPC_URL || process.env.NEXT_PUBLIC_ARC_RPC_URL))
   ? (process.env.ARC_RPC_URL || process.env.NEXT_PUBLIC_ARC_RPC_URL)
-  : 'https://rpc.mainnet.arc.io';
+  : 'https://rpc.testnet.arc.network';
 
 export const ARC_MAINNET_EXPLORER = (typeof process !== 'undefined' && process?.env && (process.env.ARC_EXPLORER_URL || process.env.NEXT_PUBLIC_ARC_EXPLORER_URL))
   ? (process.env.ARC_EXPLORER_URL || process.env.NEXT_PUBLIC_ARC_EXPLORER_URL)
-  : 'https://explorer.arc.io';
+  : 'https://testnet.arcscan.app';
 
 export const ARC_USDC_ADDRESS = ((typeof process !== 'undefined' && process?.env && (process.env.ARC_USDC_ADDRESS || process.env.NEXT_PUBLIC_ARC_USDC_ADDRESS))
   ? (process.env.ARC_USDC_ADDRESS || process.env.NEXT_PUBLIC_ARC_USDC_ADDRESS)
   : '0x3600000000000000000000000000000000000000') as `0x${string}`;
 
 /**
- * Deployed AdgasSponsorVault on Arc Mainnet
+ * Deployed AdgasSponsorVault on Arc Testnet
  */
-export const ADGAS_VAULT_ADDRESS = (typeof process !== 'undefined' && process?.env
-  ? (process.env.ADGAS_VAULT_ADDRESS || process.env.NEXT_PUBLIC_ADGAS_VAULT_ADDRESS || '0x0000000000000000000000000000000000000000')
-  : '0x0000000000000000000000000000000000000000') as `0x${string}`;
+export const ADGAS_VAULT_ADDRESS = (typeof process !== 'undefined' && process?.env && (process.env.ADGAS_VAULT_ADDRESS || process.env.NEXT_PUBLIC_ADGAS_VAULT_ADDRESS)
+  ? (process.env.ADGAS_VAULT_ADDRESS || process.env.NEXT_PUBLIC_ADGAS_VAULT_ADDRESS)
+  : '0x2068372b91fa992ac01277f27835244530a46299') as `0x${string}`;
 
 export const USDC_EIP3009_ABI = [
   // EIP-3009 Methods

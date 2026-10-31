@@ -79,7 +79,7 @@ export function AdvertiserDashboard({
   });
   const vaultBalFormatted = vaultUsdcBalanceRaw ? formatUsdcUnits(vaultUsdcBalanceRaw) : '0.00';
 
-  const baseUrl = relayerUrl || process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
+  const baseUrl = relayerUrl || process.env.NEXT_PUBLIC_RELAYER_URL || 'https://adgas.onrender.com';
 
   const [campaignsList, setCampaignsList] = useState<CampaignData[]>([]);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState<boolean>(true);

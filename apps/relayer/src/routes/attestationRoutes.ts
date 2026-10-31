@@ -60,7 +60,7 @@ export const attestationRoutes: FastifyPluginAsync<AttestationRouteOptions> = as
     };
   }>('/api/attestation/issue', async (request, reply) => {
     // 1. Vault Address and Relayer Configuration Validation (Fail-closed)
-    const vaultAddress = opts.vaultAddress || ADGAS_VAULT_ADDRESS;
+    const vaultAddress = 'vaultAddress' in opts ? opts.vaultAddress : ADGAS_VAULT_ADDRESS;
     if (
       !vaultAddress ||
       vaultAddress === '0x0000000000000000000000000000000000000000' ||

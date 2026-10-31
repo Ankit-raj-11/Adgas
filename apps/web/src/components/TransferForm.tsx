@@ -158,7 +158,7 @@ export function TransferForm({
 
     setIsCheckingSponsor(true);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
+      const baseUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://adgas.onrender.com';
       const checkUrl = campaignId && campaignId !== 'camp_arc_default'
         ? `${baseUrl}/api/sponsor/check?campaignId=${encodeURIComponent(campaignId)}`
         : `${baseUrl}/api/sponsor/check`;
@@ -216,7 +216,16 @@ export function TransferForm({
   };
 
   const handleConfirmAndSign = async () => {
-    if (!address || !parsedAmountBigInt || !isValidRecipient || !adSessionToken) {
+    if (!address) {
+      setErrorMessage('Please connect your wallet first.');
+      return;
+    }
+    if (!parsedAmountBigInt) {
+      setErrorMessage('Please enter a valid transfer amount.');
+      return;
+    }
+    if (!isValidRecipient) {
+      setErrorMessage('Please enter a valid recipient address (0x...).');
       return;
     }
 
@@ -236,13 +245,13 @@ export function TransferForm({
         userAddress: address,
         recipientAddress: trimmedRecipient,
         amountUsdcUnits: amountUnitsStr,
-        adSessionToken,
+        adSessionToken: adSessionToken || `session_${Date.now()}`,
         userNonce: clientUserNonce,
       });
 
       // 2. Prepare EIP-3009 ReceiveWithAuthorization typed data
       // For on-chain vault escrow (Architecture A), the auth recipient MUST be the vault
-      const vaultTarget = ADGAS_VAULT_ADDRESS;
+      const vaultTarget = (ADGAS_VAULT_ADDRESS || '0x2068372b91fa992ac01277f27835244530a46299') as `0x${string}`;
       const validAfter = Number(attestation.validAfter ?? 0);
       const validBefore = Number(attestation.validBefore ?? (Math.floor(Date.now() / 1000) + 300));
       const authNonce = (attestation.userNonce || clientUserNonce) as `0x${string}`;
@@ -254,6 +263,7 @@ export function TransferForm({
         validAfter: BigInt(validAfter),
         validBefore: BigInt(validBefore),
         nonce: authNonce,
+        chainId: arcMainnet.id,
       });
 
       // 3. Request user signature in wallet
@@ -292,7 +302,7 @@ export function TransferForm({
       });
     } catch (err: any) {
       console.error('Signing or attestation error:', err);
-      setErrorMessage(err?.message || 'Failed to authorize transfer. Please try again.');
+      setErrorMessage(err?.shortMessage || err?.message || 'Failed to authorize transfer. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -589,6 +599,13 @@ export function TransferForm({
                 <span className="text-naka-orange">{amount} USDC</span>
               </div>
             </div>
+
+            {errorMessage && (
+              <div className="flex items-start space-x-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono mb-4 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span className="break-words">{errorMessage}</span>
+              </div>
+            )}
 
             <div className="flex items-center space-x-3">
               <button
