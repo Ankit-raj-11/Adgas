@@ -265,6 +265,74 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
       // fallback to 25 Gwei
     }
 
+    // Ensure campaign is registered and funded on-chain in AdgasSponsorVault
+    if (vaultAddress && arcClient?.relayerAccount && arcClient?.walletClient) {
+      try {
+        const onChainCamp: any = await arcClient.publicClient.readContract({
+          address: vaultAddress,
+          abi: ADGAS_VAULT_ABI,
+          functionName: 'campaigns',
+          args: [campaignIdBytes32],
+        });
+        const sponsorAddr = onChainCamp?.[0] || onChainCamp?.sponsor;
+        const availableBal = onChainCamp?.[1] ?? onChainCamp?.availableBalanceUsdc ?? 0n;
+
+        if (!sponsorAddr || sponsorAddr === '0x0000000000000000000000000000000000000000') {
+          console.log(`Auto-registering campaign ${campaignIdBytes32} on-chain...`);
+          const regTx = await arcClient.walletClient.writeContract({
+            address: vaultAddress,
+            abi: ADGAS_VAULT_ABI,
+            functionName: 'createCampaign',
+            args: [campaignIdBytes32, 50000n, 0n, arcClient.relayerAccount.address],
+            gasPrice: networkGasPrice,
+          });
+          await arcClient.publicClient.waitForTransactionReceipt({ hash: regTx });
+
+          const depositUnits = 500000n;
+          const approveTx = await arcClient.walletClient.writeContract({
+            address: ARC_USDC_ADDRESS,
+            abi: USDC_EIP3009_ABI,
+            functionName: 'approve',
+            args: [vaultAddress, depositUnits],
+            gasPrice: networkGasPrice,
+          });
+          await arcClient.publicClient.waitForTransactionReceipt({ hash: approveTx });
+
+          const depositTx = await arcClient.walletClient.writeContract({
+            address: vaultAddress,
+            abi: ADGAS_VAULT_ABI,
+            functionName: 'depositBudget',
+            args: [campaignIdBytes32, depositUnits],
+            gasPrice: networkGasPrice,
+          });
+          await arcClient.publicClient.waitForTransactionReceipt({ hash: depositTx });
+          console.log(`Auto-registered and funded campaign ${campaignIdBytes32} on-chain.`);
+        } else if (availableBal <= 10000n) {
+          console.log(`Replenishing on-chain balance for campaign ${campaignIdBytes32}...`);
+          const replenishUnits = 500000n;
+          const approveTx = await arcClient.walletClient.writeContract({
+            address: ARC_USDC_ADDRESS,
+            abi: USDC_EIP3009_ABI,
+            functionName: 'approve',
+            args: [vaultAddress, replenishUnits],
+            gasPrice: networkGasPrice,
+          });
+          await arcClient.publicClient.waitForTransactionReceipt({ hash: approveTx });
+
+          const depTx = await arcClient.walletClient.writeContract({
+            address: vaultAddress,
+            abi: ADGAS_VAULT_ABI,
+            functionName: 'depositBudget',
+            args: [campaignIdBytes32, replenishUnits],
+            gasPrice: networkGasPrice,
+          });
+          await arcClient.publicClient.waitForTransactionReceipt({ hash: depTx });
+        }
+      } catch (autoRegErr) {
+        console.warn('Auto on-chain campaign setup check warning:', autoRegErr);
+      }
+    }
+
     // 8. Simulation on Arc Mainnet via AdgasSponsorVault.executeSponsoredTransfer
     try {
       await arcClient.publicClient.simulateContract({

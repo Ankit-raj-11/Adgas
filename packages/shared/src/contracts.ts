@@ -176,6 +176,21 @@ export const ADGAS_VAULT_ABI = [
   },
   {
     type: 'function',
+    name: 'campaigns',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'bytes32' }],
+    outputs: [
+      { name: 'sponsor', type: 'address' },
+      { name: 'availableBalanceUsdc', type: 'uint256' },
+      { name: 'lifetimeDepositedUsdc', type: 'uint256' },
+      { name: 'settledReimbursementUsdc', type: 'uint256' },
+      { name: 'maxGasPerTxUsdc', type: 'uint256' },
+      { name: 'cumulativeSpendLimitUsdc', type: 'uint256' },
+      { name: 'isActive', type: 'bool' },
+    ],
+  },
+  {
+    type: 'function',
     name: 'createCampaign',
     stateMutability: 'nonpayable',
     inputs: [
