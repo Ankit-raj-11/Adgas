@@ -150,12 +150,16 @@ export const attestationRoutes: FastifyPluginAsync<AttestationRouteOptions> = as
 
     // 4. User Rate Limiting
     if (db?.getUserActiveAttestationCount) {
-      const activeCount = await db.getUserActiveAttestationCount(userAddress);
+      const activeCount = await db.getUserActiveAttestationCount(normalizedUser);
       if (activeCount >= 2) {
-        return reply.status(429).send({
-          error: 'RateLimitError',
-          message: 'RATE_LIMIT_EXCEEDED: Maximum pending attestations reached for this address',
-        });
+        if (db?.expireUserPendingAttestations) {
+          await db.expireUserPendingAttestations(normalizedUser);
+        } else {
+          return reply.status(429).send({
+            error: 'RateLimitError',
+            message: 'RATE_LIMIT_EXCEEDED: Maximum pending attestations reached for this address',
+          });
+        }
       }
     }
 

@@ -215,6 +215,9 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
         account: arcClient.relayerAccount,
       });
     } catch (simErr: any) {
+      if (db?.consumeAttestation) {
+        await db.consumeAttestation(attestationNonce);
+      }
       await accountingEngine.releaseReservation({
         campaignId: attestation.campaignId,
         reservationId: reservation.reservationId,
@@ -244,6 +247,9 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
 
       await recoveryManager.recordBroadcast(attempt.id, txHash);
     } catch (broadcastErr: any) {
+      if (db?.consumeAttestation) {
+        await db.consumeAttestation(attestationNonce);
+      }
       await accountingEngine.releaseReservation({
         campaignId: attestation.campaignId,
         reservationId: reservation.reservationId,

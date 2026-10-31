@@ -51,11 +51,11 @@ export class PostgresDatabase {
       reservedBalanceUsdcUnits: reserved,
       settledSpendUsdcUnits: settled,
       maxGasPerTxUsdcUnits: maxGas,
-      totalFundedUsdc: c.totalFundedUsdc || '0',
-      availableBalanceUsdc: c.availableBalanceUsdc || '0',
-      reservedBalanceUsdc: c.reservedBalanceUsdc || '0',
-      settledSpendUsdc: c.settledSpendUsdc || '0',
-      maxGasPerTxUsdc: c.maxGasPerTxUsdc || '50000',
+      totalFundedUsdc: totalFunded,
+      availableBalanceUsdc: available,
+      reservedBalanceUsdc: reserved,
+      settledSpendUsdc: settled,
+      maxGasPerTxUsdc: maxGas,
       sponsoredTxCount: 0,
     };
   }
@@ -187,6 +187,18 @@ export class PostgresDatabase {
         )
       );
     return rows.length;
+  }
+
+  async expireUserPendingAttestations(userAddress: string) {
+    await this.db
+      .update(schema.attestations)
+      .set({ status: 'expired' })
+      .where(
+        and(
+          eq(schema.attestations.userAddress, userAddress.toLowerCase()),
+          eq(schema.attestations.status, 'issued')
+        )
+      );
   }
 
   async saveAttestation(record: any) {

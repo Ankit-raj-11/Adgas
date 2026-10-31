@@ -106,28 +106,33 @@ export class CampaignAccountingEngine {
       // 2. Convert to 6-decimal USDC with conservative integer ceiling rounding
       const reservedCostUsdc = nativeWeiToUsdcCeiling(estimatedGasWei, economicMultiplierBps);
 
+      const maxGasPerTx = BigInt(campaign.maxGasPerTxUsdc ?? 50_000n);
+      const availableBalance = BigInt(campaign.availableBalanceUsdc ?? 0n);
+      const reservedBalance = BigInt(campaign.reservedBalanceUsdc ?? 0n);
+      const settledSpend = BigInt(campaign.settledSpendUsdc ?? 0n);
+
       // 3. Enforce per-transaction spending limit
-      if (reservedCostUsdc > campaign.maxGasPerTxUsdc) {
+      if (reservedCostUsdc > maxGasPerTx) {
         throw new Error(
-          `EXCEEDS_MAX_GAS_PER_TX: Estimated cost ${reservedCostUsdc} USDC units exceeds campaign cap of ${campaign.maxGasPerTxUsdc}`
+          `EXCEEDS_MAX_GAS_PER_TX: Estimated cost ${reservedCostUsdc} USDC units exceeds campaign cap of ${maxGasPerTx}`
         );
       }
 
       // 4. Overdraft Check
-      if (campaign.availableBalanceUsdc < reservedCostUsdc) {
+      if (availableBalance < reservedCostUsdc) {
         throw new Error(
-          `INSUFFICIENT_CAMPAIGN_BALANCE: Available balance ${campaign.availableBalanceUsdc} insufficient for reservation ${reservedCostUsdc}`
+          `INSUFFICIENT_CAMPAIGN_BALANCE: Available balance ${availableBalance} insufficient for reservation ${reservedCostUsdc}`
         );
       }
 
       // 5. Atomic balance adjustment
-      const updatedAvailable = campaign.availableBalanceUsdc - reservedCostUsdc;
-      const updatedReserved = campaign.reservedBalanceUsdc + reservedCostUsdc;
+      const updatedAvailable = availableBalance - reservedCostUsdc;
+      const updatedReserved = reservedBalance + reservedCostUsdc;
 
       await this.deps.updateBalances(campaignId, {
         availableBalanceUsdc: updatedAvailable,
         reservedBalanceUsdc: updatedReserved,
-        settledSpendUsdc: campaign.settledSpendUsdc,
+        settledSpendUsdc: settledSpend,
       });
 
       const reservationId = `res_${randomUUID()}`;
@@ -156,6 +161,10 @@ export class CampaignAccountingEngine {
         throw new Error(`CAMPAIGN_NOT_FOUND: Campaign ${campaignId} does not exist`);
       }
 
+      const availableBalance = BigInt(campaign.availableBalanceUsdc ?? 0n);
+      const reservedBalance = BigInt(campaign.reservedBalanceUsdc ?? 0n);
+      const settledSpend = BigInt(campaign.settledSpendUsdc ?? 0n);
+
       // 1. Calculate actual confirmed gas expense with integer ceiling
       const { nativeGasCostWei, usdcDebitUnits: actualCostUsdc } = calculateSponsorshipDebit(
         gasUsed,
@@ -168,11 +177,11 @@ export class CampaignAccountingEngine {
       const unspentRefundUsdc = reservedCostUsdc > actualCostUsdc ? reservedCostUsdc - actualCostUsdc : 0n;
 
       // 3. Reconcile balances
-      const updatedReserved = campaign.reservedBalanceUsdc >= reservedCostUsdc
-        ? campaign.reservedBalanceUsdc - reservedCostUsdc
+      const updatedReserved = reservedBalance >= reservedCostUsdc
+        ? reservedBalance - reservedCostUsdc
         : 0n;
-      const updatedSettled = campaign.settledSpendUsdc + actualCostUsdc;
-      const updatedAvailable = campaign.availableBalanceUsdc + unspentRefundUsdc;
+      const updatedSettled = settledSpend + actualCostUsdc;
+      const updatedAvailable = availableBalance + unspentRefundUsdc;
 
       const newStatus = updatedAvailable === 0n && updatedReserved === 0n ? 'depleted' : campaign.status;
 
