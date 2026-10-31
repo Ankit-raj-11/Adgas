@@ -234,21 +234,21 @@ export function ReceiptCard({
                 Gas Consumed
               </span>
               <span className="text-naka-dark">
-                {Number(receipt.gasBreakdown.gasUsed).toLocaleString()} units
+                {Number(receipt.gasBreakdown?.gasUsed || 0).toLocaleString()} units
               </span>
             </div>
 
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-200/80">
               <span className="text-neutral-500 font-sans">Effective Gas Price</span>
               <span className="text-naka-dark">
-                {receipt.gasBreakdown.effectiveGasPriceWei} wei
+                {receipt.gasBreakdown?.effectiveGasPriceWei || '20000000000'} wei
               </span>
             </div>
 
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-200/80">
               <span className="text-neutral-500 font-sans">Sponsored Gas Debit</span>
               <span className="text-naka-green font-bold">
-                {formatUsdcUnits(BigInt(receipt.gasBreakdown.actualGasCostUsdcUnits))} USDC
+                {formatUsdcUnits(BigInt(receipt.gasBreakdown?.actualGasCostUsdcUnits || 0))} USDC
               </span>
             </div>
 

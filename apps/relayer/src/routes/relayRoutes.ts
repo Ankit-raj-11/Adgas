@@ -276,15 +276,21 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
         gasPrice: networkGasPrice,
       });
     } catch (simErr: any) {
-      await accountingEngine.releaseReservation({
-        campaignId: dbCampaignId,
-        reservationId: reservation.reservationId,
-        reservedCostUsdc: reservation.reservedCostUsdc,
-      });
-      return reply.status(400).send({
-        error: 'SimulationError',
-        message: `SIMULATION_FAILED: ${simErr.message}`,
-      });
+      // Arc Testnet RPC node sets tx.gasprice = 0 during eth_call (read-only simulation),
+      // which triggers AdgasVault's anti-zero-gas assertion (line 501).
+      // In live broadcast via writeContract, tx.gasprice = networkGasPrice > 0.
+      const isZeroGasPriceRevert = simErr?.message?.includes('zero gas price transaction rejected');
+      if (!isZeroGasPriceRevert) {
+        await accountingEngine.releaseReservation({
+          campaignId: dbCampaignId,
+          reservationId: reservation.reservationId,
+          reservedCostUsdc: reservation.reservedCostUsdc,
+        });
+        return reply.status(400).send({
+          error: 'SimulationError',
+          message: `SIMULATION_FAILED: ${simErr.message}`,
+        });
+      }
     }
 
     // 9. Atomic Nonce Consumption
@@ -357,12 +363,19 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
 
     return reply.status(200).send({
       status: 'confirmed',
+      success: true,
       txHash,
       blockNumber: blockNumber.toString(),
       actualCostUsdc: settlement.actualCostUsdc.toString(),
       nativeGasCostWei: settlement.nativeGasCostWei.toString(),
       unspentRefundUsdc: settlement.unspentRefundUsdc.toString(),
       explorerUrl,
+      gasBreakdown: {
+        gasUsed: gasUsed.toString(),
+        effectiveGasPriceWei: effectiveGasPrice.toString(),
+        actualGasCostWei: settlement.nativeGasCostWei.toString(),
+        actualGasCostUsdcUnits: settlement.actualCostUsdc.toString(),
+      },
     });
   });
 };
