@@ -1,15 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=Kode+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #0B0F19;
-  --foreground: #F9FAFB;
+  --background: #FFFFFF;
+  --foreground: #121212;
+  --naka-surface: #FAFAFA;
+  --naka-subtle: #F2F2F2;
+  --naka-border: #E5E5E5;
+  --naka-dark: #121212;
+  --naka-dark-surface: #191919;
+  --naka-orange: #EB6324;
+  --naka-green: #10B981;
+  --naka-muted: #737373;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: #EB6324;
+  color: #FFFFFF;
+}
+
+/* Custom Refined Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FAFAFA;
+}
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #EB6324;
+}
+
+/* Focus outline accessibility */
+*:focus-visible {
+  outline: 2px solid #EB6324;
+  outline-offset: 2px;
 }

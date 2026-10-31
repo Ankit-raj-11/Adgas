@@ -145,4 +145,34 @@ describe('Campaign & Advertiser Management Routes', () => {
     expect(body.success).toBe(true);
     expect(body.creditedAmountUsdcUnits).toBe('50000000');
   });
+
+  it('GET /api/sponsor/check checks active sponsor and validates YouTube URL', async () => {
+    const app = buildApp({ arcClient: mockArcClient, db: mockDb });
+
+    // Initially camp_demo has no videoUrl -> returns available: false
+    const resNoVideo = await app.inject({
+      method: 'GET',
+      url: '/api/sponsor/check',
+    });
+    expect(resNoVideo.statusCode).toBe(200);
+    expect(resNoVideo.json()).toEqual({
+      available: false,
+      message: 'Sorry, no sponsor found',
+    });
+
+    // Update camp_demo to have a valid YouTube URL
+    const camp = campaignsMap.get('camp_demo');
+    camp.videoUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    campaignsMap.set('camp_demo', camp);
+
+    const resWithVideo = await app.inject({
+      method: 'GET',
+      url: '/api/sponsor/check',
+    });
+    expect(resWithVideo.statusCode).toBe(200);
+    const bodyWithVideo = resWithVideo.json();
+    expect(bodyWithVideo.available).toBe(true);
+    expect(bodyWithVideo.sponsor.name).toBe('Circle Arc Sponsor');
+    expect(bodyWithVideo.sponsor.videoUrl).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  });
 });

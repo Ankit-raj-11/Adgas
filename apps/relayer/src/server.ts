@@ -5,14 +5,17 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { createArcClient } from './client/arcClient.js';
-import { ARC_MAINNET_CHAIN_ID } from '@adgas/shared';
+import { ARC_MAINNET_CHAIN_ID, ADGAS_VAULT_ADDRESS } from '@adgas/shared';
 import { attestationRoutes } from './routes/attestationRoutes.js';
 import { relayRoutes } from './routes/relayRoutes.js';
 import { campaignRoutes } from './routes/campaignRoutes.js';
+import { MemoryDatabase } from './db/memoryStore.js';
+import { PostgresDatabase } from './db/postgresStore.js';
 
 export interface BuildAppOptions {
   arcClient?: ReturnType<typeof createArcClient>;
   db?: any;
+  vaultAddress?: `0x${string}`;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -25,6 +28,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   const arc = options.arcClient || createArcClient();
+  const db =
+    options.db ||
+    (process.env.DATABASE_URL
+      ? new PostgresDatabase(process.env.DATABASE_URL)
+      : new MemoryDatabase());
+  const vaultAddress =
+    options.vaultAddress !== undefined
+      ? options.vaultAddress
+      : ((process.env.ADGAS_VAULT_ADDRESS as `0x${string}`) || ADGAS_VAULT_ADDRESS);
 
   // Health Probe Endpoint
   app.get('/health', async () => {
@@ -70,17 +82,19 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   // Register API Routes
   app.register(attestationRoutes, {
     relayerAccount: arc.relayerAccount,
-    db: options.db,
+    vaultAddress,
+    db,
   });
 
   app.register(relayRoutes, {
     arcClient: arc,
-    db: options.db,
+    vaultAddress,
+    db,
   });
 
   app.register(campaignRoutes, {
     arcClient: arc,
-    db: options.db,
+    db,
   });
 
   // Global Error Handler

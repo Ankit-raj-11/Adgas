@@ -83,6 +83,34 @@ describe('Atomic Campaign Accounting & Settlement Engine', () => {
         })
       ).rejects.toThrow('INSUFFICIENT_CAMPAIGN_BALANCE');
     });
+
+    it('handles concurrent reservations safely without overdrafting balance', async () => {
+      // Campaign has exactly 3000 units available
+      campaign.availableBalanceUsdc = 3000n;
+
+      // Two concurrent requests dispatched simultaneously, each needing 2000 units
+      const req1 = engine.reserveGas({
+        campaignId: 'camp-1',
+        gasLimit: 100_000n,
+        maxFeePerGas: 20_000_000_000n, // 2000 units
+      });
+      const req2 = engine.reserveGas({
+        campaignId: 'camp-1',
+        gasLimit: 100_000n,
+        maxFeePerGas: 20_000_000_000n, // 2000 units
+      });
+
+      const results = await Promise.allSettled([req1, req2]);
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+
+      // Exactly ONE must succeed and ONE must be rejected
+      expect(fulfilled.length).toBe(1);
+      expect(rejected.length).toBe(1);
+      expect((rejected[0] as PromiseRejectedResult).reason.message).toContain('INSUFFICIENT_CAMPAIGN_BALANCE');
+      expect(campaign.availableBalanceUsdc).toBe(1000n);
+      expect(campaign.reservedBalanceUsdc).toBe(2000n);
+    });
   });
 
   describe('settleGas', () => {

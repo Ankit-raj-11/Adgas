@@ -5,7 +5,7 @@ import { ARC_MAINNET_CHAIN_ID, ARC_MAINNET_RPC, ARC_MAINNET_EXPLORER } from '@ad
 
 export const arcMainnet = defineChain({
   id: ARC_MAINNET_CHAIN_ID,
-  name: 'Arc Mainnet',
+  name: ARC_MAINNET_CHAIN_ID === 5042002 ? 'Arc Testnet' : 'Arc Mainnet',
   nativeCurrency: {
     name: 'USD Coin',
     symbol: 'USDC',

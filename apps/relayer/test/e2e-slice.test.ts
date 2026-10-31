@@ -3,13 +3,14 @@ import { buildApp } from '../src/server.js';
 import { privateKeyToAccount } from 'viem/accounts';
 import { EIP3009_DOMAIN, EIP3009_TYPES } from '@adgas/shared';
 
-describe('End-to-End Vertical Slice Integration Test', () => {
+describe('End-to-End Vertical Slice Integration Test - Architecture A Vault Flow', () => {
   // Test accounts
   const relayerSigner = privateKeyToAccount('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80');
   const userPayer = privateKeyToAccount('0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d');
   const recipientAddress = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8' as const;
+  const mockVaultAddress = '0x1000000000000000000000000000000000000001' as const;
 
-  it('executes full critical path: ad attestation -> EIP-3009 signing -> relayer submit -> receipt & accounting', async () => {
+  it('executes full critical path: ad attestation -> ReceiveWithAuthorization signing -> relayer vault execution -> receipt & accounting', async () => {
     // 1. In-memory simulated storage for end-to-end integration
     const campaign = {
       id: 'camp-nike-arc',
@@ -27,12 +28,17 @@ describe('End-to-End Vertical Slice Integration Test', () => {
     const attempts = new Map<string, any>();
 
     const mockDb = {
-      getCampaign: async (id: string) => (id === campaign.id ? campaign : null),
+      getCampaign: async (id: string) => {
+        if (id === campaign.id || id.startsWith('0x63616d702d6e696b652d617263')) return campaign;
+        return null;
+      },
       updateBalances: async (id: string, updates: any) => {
-        if (id === campaign.id) Object.assign(campaign, updates);
+        if (id === campaign.id || id.startsWith('0x63616d702d6e696b652d617263')) {
+          Object.assign(campaign, updates);
+        }
       },
       saveAttestation: async (rec: any) => {
-        attestations.set(rec.nonce, rec);
+        attestations.set(rec.attestationNonce || rec.nonce, rec);
         return rec;
       },
       getAttestation: async (nonce: string) => attestations.get(nonce) || null,
@@ -51,12 +57,21 @@ describe('End-to-End Vertical Slice Integration Test', () => {
       getPendingAttempts: async () => Array.from(attempts.values()),
     };
 
+    let simulatedTarget: string | null = null;
+    let simulatedFunction: string | null = null;
+    let broadcastTarget: string | null = null;
+    let broadcastFunction: string | null = null;
+
     const mockArcClient = {
       publicClient: {
         getBlockNumber: async () => 27939500n,
         getBalance: async () => 5n * 10n ** 18n, // 5 native USDC
         readContract: async () => 0, // authorizationState == 0 (Unused)
-        simulateContract: async () => ({ request: {} }),
+        simulateContract: async (args: any) => {
+          simulatedTarget = args.address;
+          simulatedFunction = args.functionName;
+          return { request: {} };
+        },
         waitForTransactionReceipt: async () => ({
           status: 'success',
           blockNumber: 27939501n,
@@ -65,7 +80,11 @@ describe('End-to-End Vertical Slice Integration Test', () => {
         }),
       },
       walletClient: {
-        writeContract: async () => '0x99e2e_arc_mainnet_hash_confirmed',
+        writeContract: async (args: any) => {
+          broadcastTarget = args.address;
+          broadcastFunction = args.functionName;
+          return '0x99e2e_arc_mainnet_hash_confirmed';
+        },
       },
       relayerAccount: relayerSigner,
     };
@@ -73,6 +92,7 @@ describe('End-to-End Vertical Slice Integration Test', () => {
     const app = buildApp({
       arcClient: mockArcClient as any,
       db: mockDb,
+      vaultAddress: mockVaultAddress,
     } as any);
 
     // STEP A: User Completes Video Ad -> Requests Attestation
@@ -90,22 +110,23 @@ describe('End-to-End Vertical Slice Integration Test', () => {
 
     expect(attestRes.statusCode).toBe(200);
     const attestation = attestRes.json();
-    expect(attestation.nonce).toBeDefined();
+    expect(attestation.attestationNonce).toBeDefined();
     expect(attestation.signature).toBeDefined();
+    expect(attestation.domain.verifyingContract).toBe(mockVaultAddress);
 
-    // STEP B: User Signs EIP-3009 TransferWithAuthorization Typed Data
+    // STEP B: User Signs EIP-3009 ReceiveWithAuthorization (Target = Vault)
     const nowSec = Math.floor(Date.now() / 1000);
     const validAfter = nowSec - 10;
     const validBefore = nowSec + 600;
-    const clientNonce = '0x' + '2'.repeat(64) as `0x${string}`;
+    const clientNonce = (attestation.userNonce || ('0x' + '2'.repeat(64))) as `0x${string}`;
 
     const rawSig = await userPayer.signTypedData({
       domain: EIP3009_DOMAIN,
       types: EIP3009_TYPES,
-      primaryType: 'TransferWithAuthorization',
+      primaryType: 'ReceiveWithAuthorization',
       message: {
         from: userPayer.address,
-        to: recipientAddress,
+        to: mockVaultAddress, // Vault is the recipient for receiveWithAuthorization
         value: 2_500_000n,
         validAfter: BigInt(validAfter),
         validBefore: BigInt(validBefore),
@@ -118,15 +139,15 @@ describe('End-to-End Vertical Slice Integration Test', () => {
     const s = `0x${rawSig.slice(66, 130)}` as `0x${string}`;
     const v = parseInt(rawSig.slice(130, 132), 16);
 
-    // STEP C: Relayer Submits Transfer
+    // STEP C: Relayer Submits Vault executeSponsoredTransfer
     const relayRes = await app.inject({
       method: 'POST',
       url: '/api/relay/transfer',
       payload: {
-        attestationNonce: attestation.nonce,
+        attestationNonce: attestation.attestationNonce || attestation.nonce,
         authorization: {
           from: userPayer.address,
-          to: recipientAddress,
+          to: mockVaultAddress,
           value: '2500000',
           validAfter,
           validBefore,
@@ -145,6 +166,12 @@ describe('End-to-End Vertical Slice Integration Test', () => {
     expect(confirmation.txHash).toBe('0x99e2e_arc_mainnet_hash_confirmed');
     expect(confirmation.blockNumber).toBe('27939501');
 
+    // Verify contract execution targeted AdgasSponsorVault.executeSponsoredTransfer
+    expect(simulatedTarget).toBe(mockVaultAddress);
+    expect(simulatedFunction).toBe('executeSponsoredTransfer');
+    expect(broadcastTarget).toBe(mockVaultAddress);
+    expect(broadcastFunction).toBe('executeSponsoredTransfer');
+
     // 78,245 gas * 20 Gwei = 1,564,900,000,000,000 wei
     // 1,564,900,000,000,000 / 10^12 = 1564.9 -> ceiling rounds to 1565 units ($0.001565)
     expect(confirmation.actualCostUsdc).toBe('1565');
@@ -161,10 +188,10 @@ describe('End-to-End Vertical Slice Integration Test', () => {
       method: 'POST',
       url: '/api/relay/transfer',
       payload: {
-        attestationNonce: attestation.nonce,
+        attestationNonce: attestation.attestationNonce || attestation.nonce,
         authorization: {
           from: userPayer.address,
-          to: recipientAddress,
+          to: mockVaultAddress,
           value: '2500000',
           validAfter,
           validBefore,

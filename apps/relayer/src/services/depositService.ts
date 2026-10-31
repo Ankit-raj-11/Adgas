@@ -6,7 +6,7 @@
  * and duplicate credit replay attacks.
  */
 
-import { ARC_USDC_ADDRESS } from '@adgas/shared';
+import { ARC_USDC_ADDRESS, ADGAS_VAULT_ADDRESS } from '@adgas/shared';
 
 const TRANSFER_EVENT_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
@@ -55,9 +55,11 @@ export async function verifyAndCreditDeposit(
     throw new Error('TRANSACTION_REVERTED: Deposit transaction reverted on-chain');
   }
 
-  // 3. Find and validate the Transfer log on the official USDC contract
   const expectedSenderTopic = '0x' + expectedSponsorAddress.toLowerCase().replace('0x', '').padStart(64, '0');
   const expectedEscrowTopic = '0x' + escrowAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+  const expectedVaultTopic = ADGAS_VAULT_ADDRESS && ADGAS_VAULT_ADDRESS !== '0x0000000000000000000000000000000000000000'
+    ? '0x' + ADGAS_VAULT_ADDRESS.toLowerCase().replace('0x', '').padStart(64, '0')
+    : null;
 
   const transferLog = receipt.logs.find((log: any) => {
     const isUsdc = log.address.toLowerCase() === ARC_USDC_ADDRESS.toLowerCase();
@@ -76,8 +78,11 @@ export async function verifyAndCreditDeposit(
     throw new Error('SPONSOR_MISMATCH: Transfer sender does not match registered campaign sponsor');
   }
 
-  if (logRecipientTopic !== expectedEscrowTopic) {
-    throw new Error('ESCROW_MISMATCH: Transfer recipient is not the designated Adgas escrow address');
+  const matchesEscrow = logRecipientTopic === expectedEscrowTopic;
+  const matchesVault = expectedVaultTopic ? logRecipientTopic === expectedVaultTopic : false;
+
+  if (!matchesEscrow && !matchesVault) {
+    throw new Error('ESCROW_MISMATCH: Transfer recipient is not the designated Adgas escrow or vault contract address');
   }
 
   const amountUsdc = BigInt(transferLog.data);

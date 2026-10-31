@@ -1,0 +1,15 @@
+{
+  "solidity.packageDefaultDependenciesContractsDirectory": "",
+  "solidity.packageDefaultDependenciesDirectory": "contracts/lib",
+  "solidity.remappings": [
+    "@openzeppelin/contracts/=contracts/lib/openzeppelin-contracts/contracts/",
+    "forge-std/=contracts/lib/forge-std/src/",
+    "ds-test/=contracts/lib/openzeppelin-contracts/lib/forge-std/lib/ds-test/src/"
+  ],
+  "solidity.remappingsUnix": [
+    "@openzeppelin/contracts/=contracts/lib/openzeppelin-contracts/contracts/",
+    "forge-std/=contracts/lib/forge-std/src/",
+    "ds-test/=contracts/lib/openzeppelin-contracts/lib/forge-std/lib/ds-test/src/"
+  ]
+}
+

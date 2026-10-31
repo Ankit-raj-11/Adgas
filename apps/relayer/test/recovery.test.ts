@@ -166,4 +166,102 @@ describe('Transaction Pre-Broadcast Persistence & Crash Recovery Manager', () =>
       reservedCostUsdc: 2000n,
     }));
   });
+
+  it('keeps transaction in pending status when broadcast outcome is uncertain (in mempool)', async () => {
+    inFlightTxs.set('tx-mempool', {
+      id: 'tx-mempool',
+      attestationNonce: 'att-mem',
+      campaignId: 'camp-1',
+      userAddress: '0x1111111111111111111111111111111111111111',
+      recipientAddress: '0x2222222222222222222222222222222222222222',
+      amountUsdc: 10_000_000n,
+      relayerAddress: '0x9999999999999999999999999999999999999999',
+      relayerNonce: 7,
+      status: 'submitted',
+      txHash: '0xpendinghash',
+      reservedCostUsdc: 2000n,
+    });
+
+    mockRpc.getTransactionReceipt.mockResolvedValue(null); // Not yet mined
+
+    const reconciled = await recoveryManager.reconcilePendingTransactions();
+    expect(reconciled.pendingCount).toBe(1);
+    expect(reconciled.confirmedCount).toBe(0);
+    expect(reconciled.failedOnChainCount).toBe(0);
+    expect(reconciled.droppedCount).toBe(0);
+
+    // Must NOT prematurely settle or release reservation
+    expect(mockAccounting.settleGas).not.toHaveBeenCalled();
+    expect(mockAccounting.releaseReservation).not.toHaveBeenCalled();
+    expect(inFlightTxs.get('tx-mempool')?.status).toBe('submitted');
+  });
+
+  it('concurrently reconciles multiple attempts with mixed outcomes', async () => {
+    inFlightTxs.set('tx-ok', {
+      id: 'tx-ok',
+      attestationNonce: 'att-ok',
+      campaignId: 'camp-1',
+      userAddress: '0x1111111111111111111111111111111111111111',
+      recipientAddress: '0x2222222222222222222222222222222222222222',
+      amountUsdc: 10_000_000n,
+      relayerAddress: '0x9999999999999999999999999999999999999999',
+      relayerNonce: 8,
+      status: 'submitted',
+      txHash: '0xokhash',
+      reservedCostUsdc: 2000n,
+    });
+
+    inFlightTxs.set('tx-fail', {
+      id: 'tx-fail',
+      attestationNonce: 'att-fail',
+      campaignId: 'camp-1',
+      userAddress: '0x1111111111111111111111111111111111111111',
+      recipientAddress: '0x2222222222222222222222222222222222222222',
+      amountUsdc: 10_000_000n,
+      relayerAddress: '0x9999999999999999999999999999999999999999',
+      relayerNonce: 9,
+      status: 'submitted',
+      txHash: '0xfailhash',
+      reservedCostUsdc: 2000n,
+    });
+
+    mockRpc.getTransactionReceipt.mockImplementation(async ({ hash }: any) => {
+      if (hash === '0xokhash') {
+        return { status: 'success', blockNumber: 100n, gasUsed: 60_000n, effectiveGasPrice: 20_000_000_000n };
+      }
+      if (hash === '0xfailhash') {
+        return { status: 'reverted', blockNumber: 101n, gasUsed: 30_000n, effectiveGasPrice: 20_000_000_000n };
+      }
+      return null;
+    });
+
+    const reconciled = await recoveryManager.reconcilePendingTransactions();
+    expect(reconciled.confirmedCount).toBe(1);
+    expect(reconciled.failedOnChainCount).toBe(1);
+    expect(inFlightTxs.get('tx-ok')?.status).toBe('confirmed');
+    expect(inFlightTxs.get('tx-fail')?.status).toBe('failed_onchain');
+  });
+
+  it('retrieves submitted attempts from MemoryDatabase during restart reconciliation', async () => {
+    const { MemoryDatabase } = await import('../src/db/memoryStore.js');
+    const memDb = new MemoryDatabase();
+    await memDb.persistAttempt({
+      id: 'tx-restart-1',
+      attestationNonce: 'att-res',
+      campaignId: 'camp-1',
+      userAddress: '0x1111111111111111111111111111111111111111',
+      recipientAddress: '0x2222222222222222222222222222222222222222',
+      amountUsdc: 10_000_000n,
+      relayerAddress: '0x9999999999999999999999999999999999999999',
+      relayerNonce: 8,
+      status: 'submitted',
+      txHash: '0xsubmittedHash',
+      reservedCostUsdc: 2000n,
+    });
+
+    const pending = await memDb.getPendingAttempts();
+    expect(pending.length).toBe(1);
+    expect(pending[0].status).toBe('submitted');
+    expect(pending[0].txHash).toBe('0xsubmittedHash');
+  });
 });

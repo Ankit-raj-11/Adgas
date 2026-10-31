@@ -3,15 +3,23 @@ import {
   EIP3009_DOMAIN,
   EIP3009_TYPES,
   USDC_TOKEN_DECIMALS,
+  ADGAS_VAULT_ADDRESS,
+  buildReceiveWithAuthorizationTypedData,
+  type BuildReceiveWithAuthorizationParams,
 } from '@adgas/shared';
+
+export { buildReceiveWithAuthorizationTypedData };
+export type { BuildReceiveWithAuthorizationParams };
 
 export interface Eip3009AuthorizationParams {
   from: `0x${string}`;
   to: `0x${string}`;
   value: bigint;
-  validAfter: number;
-  validBefore: number;
+  validAfter: number | bigint;
+  validBefore: number | bigint;
   nonce: `0x${string}`;
+  type?: 'ReceiveWithAuthorization' | 'TransferWithAuthorization';
+  vaultAddress?: `0x${string}`;
 }
 
 export interface SplitSignature {
@@ -59,12 +67,31 @@ export function generateEip3009Nonce(): `0x${string}` {
 }
 
 /**
- * Constructs EIP-712 Typed Data structure for Wagmi/Viem signTypedData
+ * Constructs EIP-712 Typed Data structure for Wagmi/Viem signTypedData.
+ * Supports both ReceiveWithAuthorization (Architecture A default) and TransferWithAuthorization.
  */
 export function buildEip3009TypedData(params: Eip3009AuthorizationParams) {
+  const isReceive =
+    params.type === 'ReceiveWithAuthorization' ||
+    (params.type === undefined && !!params.vaultAddress);
+
+  if (isReceive) {
+    const vault = params.vaultAddress || ADGAS_VAULT_ADDRESS;
+    return buildReceiveWithAuthorizationTypedData({
+      vaultAddress: vault,
+      from: params.from,
+      value: params.value,
+      validAfter: BigInt(params.validAfter),
+      validBefore: BigInt(params.validBefore),
+      nonce: params.nonce,
+    });
+  }
+
   return {
     domain: EIP3009_DOMAIN,
-    types: EIP3009_TYPES,
+    types: {
+      TransferWithAuthorization: EIP3009_TYPES.TransferWithAuthorization,
+    },
     primaryType: 'TransferWithAuthorization' as const,
     message: {
       from: params.from,
@@ -90,7 +117,7 @@ export function splitSignatureBytes(signatureHex: `0x${string}`): SplitSignature
 }
 
 /**
- * Requests an ad-sponsored gas attestation from the relayer backend
+ * Requests an on-chain ad-sponsored gas attestation from the relayer backend
  */
 export async function requestGasAttestation(params: {
   relayerUrl?: string;
@@ -98,13 +125,11 @@ export async function requestGasAttestation(params: {
   userAddress: `0x${string}`;
   recipientAddress: `0x${string}`;
   amountUsdcUnits: string;
-  adSessionToken: string;
-}): Promise<{
-  attestationNonce: string;
-  signature: `0x${string}`;
-  expiryTimestamp: number;
-  maxGasCoverageWei: string;
-}> {
+  adSessionToken?: string;
+  userNonce?: string;
+  validAfter?: number;
+  validBefore?: number;
+}): Promise<any> {
   const baseUrl = params.relayerUrl || process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
   const response = await fetch(`${baseUrl}/api/attestation/issue`, {
     method: 'POST',
@@ -115,6 +140,9 @@ export async function requestGasAttestation(params: {
       recipientAddress: params.recipientAddress,
       amountUsdcUnits: params.amountUsdcUnits,
       adSessionToken: params.adSessionToken,
+      userNonce: params.userNonce,
+      validAfter: params.validAfter,
+      validBefore: params.validBefore,
     }),
   });
 
@@ -131,7 +159,9 @@ export async function requestGasAttestation(params: {
  */
 export async function submitRelayTransfer(params: {
   relayerUrl?: string;
-  attestationNonce: string;
+  attestationNonce?: string;
+  campaignId?: string;
+  attestation?: any;
   authorization: {
     from: `0x${string}`;
     to: `0x${string}`;
@@ -160,7 +190,12 @@ export async function submitRelayTransfer(params: {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      attestationNonce: params.attestationNonce,
+      attestationNonce:
+        params.attestationNonce ||
+        params.attestation?.attestationNonce ||
+        params.attestation?.nonce,
+      campaignId: params.campaignId || params.attestation?.campaignId,
+      attestation: params.attestation,
       authorization: params.authorization,
     }),
   });

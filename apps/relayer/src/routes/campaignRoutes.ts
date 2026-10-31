@@ -10,12 +10,45 @@ export interface CampaignRouteOptions {
 export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (app, opts) => {
   const { arcClient, db } = opts;
 
+  // GET /api/sponsor/check - Check if an active sponsor with a valid video exists
+  app.get('/api/sponsor/check', async (_request, reply) => {
+    const campaigns = db?.listCampaigns ? await db.listCampaigns() : [];
+    // Find active campaign with budget and a valid YouTube URL
+    const active = campaigns.find(
+      (c: any) =>
+        c.status === 'active' &&
+        BigInt(c.availableBalanceUsdcUnits || '0') > 0n &&
+        typeof c.videoUrl === 'string' &&
+        c.videoUrl.trim().length > 0 &&
+        (c.videoUrl.includes('youtube.com') || c.videoUrl.includes('youtu.be'))
+    );
+
+    if (!active) {
+      return reply.status(200).send({
+        available: false,
+        message: 'Sorry, no sponsor found',
+      });
+    }
+
+    return reply.status(200).send({
+      available: true,
+      sponsor: {
+        id: active.id,
+        name: active.name,
+        sponsorAddress: active.sponsorAddress,
+        videoUrl: active.videoUrl.trim(),
+        availableBalanceUsdcUnits: active.availableBalanceUsdcUnits?.toString(),
+      },
+    });
+  });
+
   // GET /api/campaigns - List all campaigns
   app.get('/api/campaigns', async (_request, reply) => {
     const campaigns = db?.listCampaigns ? await db.listCampaigns() : [];
     return reply.status(200).send({
       campaigns: campaigns.map((c: any) => ({
         ...c,
+        videoUrl: c.videoUrl || '',
         totalFundedUsdcUnits: c.totalFundedUsdcUnits?.toString(),
         availableBalanceUsdcUnits: c.availableBalanceUsdcUnits?.toString(),
         reservedBalanceUsdcUnits: c.reservedBalanceUsdcUnits?.toString(),
@@ -38,6 +71,7 @@ export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (a
     return reply.status(200).send({
       campaign: {
         ...campaign,
+        videoUrl: campaign.videoUrl || '',
         totalFundedUsdcUnits: campaign.totalFundedUsdcUnits?.toString(),
         availableBalanceUsdcUnits: campaign.availableBalanceUsdcUnits?.toString(),
         reservedBalanceUsdcUnits: campaign.reservedBalanceUsdcUnits?.toString(),
@@ -53,9 +87,10 @@ export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (a
       sponsorAddress: `0x${string}`;
       name: string;
       maxGasPerTxUsdcUnits?: string;
+      videoUrl?: string;
     };
   }>('/api/campaigns', async (request, reply) => {
-    const { sponsorAddress, name, maxGasPerTxUsdcUnits } = request.body || {};
+    const { sponsorAddress, name, maxGasPerTxUsdcUnits, videoUrl } = request.body || {};
 
     if (!sponsorAddress || !name || !isAddress(sponsorAddress)) {
       return reply.status(400).send({
@@ -64,10 +99,21 @@ export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (a
       });
     }
 
+    if (videoUrl && videoUrl.trim()) {
+      const trimmed = videoUrl.trim();
+      if (!trimmed.includes('youtube.com') && !trimmed.includes('youtu.be')) {
+        return reply.status(400).send({
+          error: 'ValidationError',
+          message: 'Sponsor video must be a valid YouTube URL (e.g. https://www.youtube.com/watch?v=...)',
+        });
+      }
+    }
+
     const newCampaign = {
       id: `camp_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
       sponsorAddress: sponsorAddress.toLowerCase(),
       name,
+      videoUrl: videoUrl || '',
       totalFundedUsdcUnits: 0n,
       availableBalanceUsdcUnits: 0n,
       reservedBalanceUsdcUnits: 0n,
@@ -86,6 +132,7 @@ export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (a
     return reply.status(201).send({
       campaign: {
         ...newCampaign,
+        videoUrl: newCampaign.videoUrl,
         totalFundedUsdcUnits: newCampaign.totalFundedUsdcUnits.toString(),
         availableBalanceUsdcUnits: newCampaign.availableBalanceUsdcUnits.toString(),
         reservedBalanceUsdcUnits: newCampaign.reservedBalanceUsdcUnits.toString(),

@@ -4,6 +4,7 @@ export const campaigns = pgTable('campaigns', {
   id: varchar('id', { length: 36 }).primaryKey(),
   sponsorAddress: varchar('sponsor_address', { length: 42 }).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
+  videoUrl: text('video_url'),
   totalFundedUsdc: numeric('total_funded_usdc').notNull().default('0'), // 6 decimals
   availableBalanceUsdc: numeric('available_balance_usdc').notNull().default('0'),
   reservedBalanceUsdc: numeric('reserved_balance_usdc').notNull().default('0'),
