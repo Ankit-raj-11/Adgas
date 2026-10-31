@@ -20,7 +20,7 @@ const DEFAULT_CAMPAIGN: ActiveCampaign = {
   brandName: 'Arc Network Foundation',
   adTitle: 'Arc Network Foundation Spotlight',
   videoUrl: '',
-  durationSeconds: 10,
+  durationSeconds: 30,
 };
 
 export default function TransferPage() {
@@ -43,14 +43,31 @@ export default function TransferPage() {
         const res = await fetch(`${baseUrl}/api/campaigns`);
         if (res.ok) {
           const data = await res.json();
-          const active = data.campaigns?.find((c: any) => c.status === 'active');
+          const eligible = (data.campaigns || []).filter(
+            (c: any) =>
+              c.status === 'active' &&
+              BigInt(c.availableBalanceUsdcUnits || '0') > 0n &&
+              typeof c.videoUrl === 'string' &&
+              c.videoUrl.trim().length > 0
+          );
+          eligible.sort((a: any, b: any) => {
+            const aIsDefault = a.id === 'camp_arc_default';
+            const bIsDefault = b.id === 'camp_arc_default';
+            if (aIsDefault && !bIsDefault) return 1;
+            if (!aIsDefault && bIsDefault) return -1;
+            const timeA = new Date(a.createdAt || 0).getTime();
+            const timeB = new Date(b.createdAt || 0).getTime();
+            return timeB - timeA;
+          });
+
+          const active = eligible[0];
           if (active && isMounted) {
             setActiveCampaign({
               id: active.id,
               brandName: active.name,
               adTitle: `${active.name} Spotlight`,
               videoUrl: active.videoUrl || '',
-              durationSeconds: 10,
+              durationSeconds: 30,
             });
           }
         }

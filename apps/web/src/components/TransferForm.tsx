@@ -64,7 +64,7 @@ export function TransferForm({
   brandName = 'Arc Network Foundation',
   adTitle = 'Instant USDC on Arc Network',
   videoUrl,
-  durationSeconds = 10,
+  durationSeconds = 30,
   isAdCompleted,
   adSessionToken,
   onAdComplete,
@@ -159,7 +159,10 @@ export function TransferForm({
     setIsCheckingSponsor(true);
     try {
       const baseUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
-      const res = await fetch(`${baseUrl}/api/sponsor/check`);
+      const checkUrl = campaignId && campaignId !== 'camp_arc_default'
+        ? `${baseUrl}/api/sponsor/check?campaignId=${encodeURIComponent(campaignId)}`
+        : `${baseUrl}/api/sponsor/check`;
+      const res = await fetch(checkUrl);
       const data = await res.json();
 
       if (!res.ok || !data.available || !data.sponsor?.videoUrl) {
@@ -427,29 +430,61 @@ export function TransferForm({
           </div>
         )}
 
-        {/* SECTION 4: SPONSOR VIDEO SPOTLIGHT (Shown strictly when requested or completed) */}
-        {(showVideoPlayer || isAdCompleted) && (
-          <div className="space-y-2 animate-in fade-in duration-300">
-            <VideoAdPlayer
-              campaignId={activeSponsor?.id || campaignId}
-              brandName={effectiveBrandName}
-              adTitle={`${effectiveBrandName} Spotlight`}
-              videoUrl={effectiveVideoUrl}
-              durationSeconds={durationSeconds}
-              autoStart={true}
-              onAdComplete={(proof) => {
-                setIsAdPlaying(false);
-                onAdComplete(proof);
-              }}
-              isUnlocked={isAdCompleted}
-              onClose={() => {
-                if (!isAdCompleted) {
-                  setShowVideoPlayer(false);
-                  setIsAdPlaying(false);
-                }
-              }}
-            />
+        {/* SECTION 4: SPONSOR GAS SUBSIDY BADGE (Inline inside form when completed) */}
+        {isAdCompleted && (
+          <div className="w-full bg-emerald-50 border border-emerald-200/80 rounded-2xl p-4 transition-all animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-naka-green text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-naka-dark flex items-center gap-1.5 font-sans">
+                    <span>Gas Fee Sponsored</span>
+                    <span className="text-[10px] font-mono text-naka-green bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                      $0.00 GAS
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-naka-muted font-sans mt-0.5">
+                    Arc gas subsidized by <strong className="text-naka-dark font-medium">{effectiveBrandName}</strong>. Ready to sign.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowVideoPlayer(true);
+                  setIsAdPlaying(true);
+                }}
+                className="text-[11px] font-mono text-neutral-500 hover:text-naka-dark px-2.5 py-1 rounded-full border border-naka-border bg-white hover:border-neutral-400 transition-all cursor-pointer shadow-2xs"
+              >
+                Re-watch
+              </button>
+            </div>
           </div>
+        )}
+
+        {/* MODAL POPUP VIDEO PLAYER (Centered floating dialog ~70% screen size) */}
+        {showVideoPlayer && (
+          <VideoAdPlayer
+            campaignId={activeSponsor?.id || campaignId}
+            brandName={effectiveBrandName}
+            adTitle={`${effectiveBrandName} Spotlight`}
+            videoUrl={effectiveVideoUrl}
+            durationSeconds={durationSeconds}
+            autoStart={true}
+            onAdComplete={(proof) => {
+              setIsAdPlaying(false);
+              setShowVideoPlayer(false);
+              onAdComplete(proof);
+            }}
+            isUnlocked={isAdCompleted}
+            onClose={() => {
+              setShowVideoPlayer(false);
+              setIsAdPlaying(false);
+            }}
+          />
         )}
 
         {/* PRIMARY ACTION BUTTON (Single, non-duplicated) */}

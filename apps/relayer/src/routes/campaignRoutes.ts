@@ -30,17 +30,43 @@ export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (a
   const { arcClient, db } = opts;
 
   // GET /api/sponsor/check - Check if an active sponsor with a valid video exists
-  app.get('/api/sponsor/check', async (_request, reply) => {
+  app.get<{
+    Querystring: { campaignId?: string };
+  }>('/api/sponsor/check', async (request, reply) => {
+    const { campaignId } = request.query || {};
     const campaigns = db?.listCampaigns ? await db.listCampaigns() : [];
-    // Find active campaign with budget and a valid YouTube URL
-    const active = campaigns.find(
-      (c: any) =>
-        c.status === 'active' &&
-        BigInt(c.availableBalanceUsdcUnits || '0') > 0n &&
-        typeof c.videoUrl === 'string' &&
-        c.videoUrl.trim().length > 0 &&
-        (c.videoUrl.includes('youtube.com') || c.videoUrl.includes('youtu.be'))
-    );
+
+    const isEligible = (c: any) =>
+      c.status === 'active' &&
+      BigInt(c.availableBalanceUsdcUnits || '0') > 0n &&
+      typeof c.videoUrl === 'string' &&
+      c.videoUrl.trim().length > 0 &&
+      (c.videoUrl.includes('youtube.com') ||
+        c.videoUrl.includes('youtu.be') ||
+        c.videoUrl.match(/\.(mp4|webm)/i));
+
+    let active: any = null;
+
+    // 1. If explicit campaignId requested, check if it's eligible
+    if (campaignId) {
+      active = campaigns.find((c: any) => c.id === campaignId && isEligible(c));
+    }
+
+    // 2. Otherwise pick the best eligible campaign:
+    // Prioritize custom user-created campaigns (id !== 'camp_arc_default'), sorted newest first
+    if (!active) {
+      const eligible = campaigns.filter(isEligible);
+      eligible.sort((a: any, b: any) => {
+        const aIsDefault = a.id === 'camp_arc_default';
+        const bIsDefault = b.id === 'camp_arc_default';
+        if (aIsDefault && !bIsDefault) return 1;
+        if (!aIsDefault && bIsDefault) return -1;
+        const timeA = new Date(a.createdAt || 0).getTime();
+        const timeB = new Date(b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+      active = eligible[0] || null;
+    }
 
     if (!active) {
       return reply.status(200).send({

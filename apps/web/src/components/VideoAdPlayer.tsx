@@ -2,15 +2,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Play,
-  Pause,
   Volume2,
   VolumeX,
   CheckCircle2,
-  RefreshCw,
   ShieldCheck,
+  X,
   ExternalLink,
-  Film,
+  Sparkles,
 } from 'lucide-react';
 import { AdSessionTracker, AdCompletionProof } from '../lib/adSession';
 
@@ -32,9 +30,10 @@ export interface VideoAdPlayerProps {
  * Helper to identify and parse YouTube, direct MP4, or generic video links
  */
 function parseMediaSource(rawUrl?: string): {
-  kind: 'youtube' | 'instagram' | 'direct' | 'generic';
+  kind: 'youtube' | 'direct' | 'generic';
   embedUrl: string;
   originalUrl: string;
+  videoId?: string;
 } {
   if (!rawUrl || !rawUrl.trim()) {
     return { kind: 'generic', embedUrl: '', originalUrl: '' };
@@ -47,20 +46,16 @@ function parseMediaSource(rawUrl?: string): {
     /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i
   );
   if (ytMatch && ytMatch[1]) {
+    const videoId = ytMatch[1];
+    // Loop with playlist=videoId so even if the sponsor video is shorter than 30s, it loops smoothly
+    // enablejsapi=1 allows controlling mute via postMessage
     return {
       kind: 'youtube',
-      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&controls=1&playsinline=1&modestbranding=1&rel=0`,
+      embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1&controls=0&loop=1&playlist=${videoId}&enablejsapi=1&origin=${encodeURIComponent(
+        typeof window !== 'undefined' ? window.location.origin : ''
+      )}`,
       originalUrl: url,
-    };
-  }
-
-  // Instagram match: instagram.com/reel/<id> or instagram.com/p/<id>
-  const instaMatch = url.match(/instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/i);
-  if (instaMatch && instaMatch[1]) {
-    return {
-      kind: 'instagram',
-      embedUrl: `https://www.instagram.com/reel/${instaMatch[1]}/embed/`,
-      originalUrl: url,
+      videoId,
     };
   }
 
@@ -77,9 +72,8 @@ export function VideoAdPlayer({
   brandName,
   adTitle,
   videoUrl,
-  durationSeconds = 10,
-  autoStart = false,
-  isPlayingOverride,
+  durationSeconds = 30, // Default to strict 30-second requirement
+  autoStart = true,
   onPlayStateChange,
   onAdComplete,
   isUnlocked = false,
@@ -87,10 +81,13 @@ export function VideoAdPlayer({
 }: VideoAdPlayerProps) {
   const [isPlaying, setIsPlaying] = useState<boolean>(autoStart);
   const [isMuted, setIsMuted] = useState<boolean>(true);
-  const [watchedSeconds, setWatchedSeconds] = useState<number>(0);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(durationSeconds);
   const [isCompleted, setIsCompleted] = useState<boolean>(isUnlocked);
 
   const trackerRef = useRef<AdSessionTracker | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   if (!trackerRef.current) {
     trackerRef.current = new AdSessionTracker({ campaignId, brandName, durationSeconds });
   }
@@ -103,34 +100,27 @@ export function VideoAdPlayer({
 
   const media = parseMediaSource(videoUrl);
 
-  useEffect(() => {
-    if (isPlayingOverride !== undefined && !isCompleted) {
-      setIsPlaying(isPlayingOverride);
-    }
-  }, [isPlayingOverride, isCompleted]);
-
+  // If already unlocked from parent
   useEffect(() => {
     if (isUnlocked && !isCompleted) {
       setIsCompleted(true);
+      setRemainingSeconds(0);
     }
   }, [isUnlocked, isCompleted]);
 
-  // Notify parent only when playing state actually transitions
-  useEffect(() => {
-    onPlayStateChangeRef.current?.(isPlaying, Math.max(0, durationSeconds - watchedSeconds));
-  }, [isPlaying, durationSeconds, watchedSeconds]);
-
-  // Handle timer countdown during active playback
+  // Reverse countdown timer loop
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isPlaying && !isCompleted) {
       interval = setInterval(() => {
         const tracker = trackerRef.current;
         if (!tracker) return;
-        tracker.tick(1);
-        setWatchedSeconds(tracker.watchedSeconds);
 
-        if (tracker.isComplete) {
+        tracker.tick(1);
+        const rem = Math.max(0, durationSeconds - tracker.watchedSeconds);
+        setRemainingSeconds(rem);
+
+        if (tracker.isComplete || rem === 0) {
           setIsPlaying(false);
           setIsCompleted(true);
           try {
@@ -146,188 +136,212 @@ export function VideoAdPlayer({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPlaying, isCompleted]);
+  }, [isPlaying, isCompleted, durationSeconds]);
 
-  const handleTogglePlay = () => {
-    if (isCompleted) return;
-    setIsPlaying((prev) => !prev);
+  // Audio mute/unmute control (single control button)
+  const handleToggleMute = () => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+
+    if (media.kind === 'youtube' && iframeRef.current?.contentWindow) {
+      const func = nextMuted ? 'mute' : 'unMute';
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func, args: [] }),
+        '*'
+      );
+    } else if (media.kind === 'direct' && videoRef.current) {
+      videoRef.current.muted = nextMuted;
+    }
   };
 
-  const handleRestart = () => {
-    trackerRef.current.reset();
-    setWatchedSeconds(0);
-    setIsCompleted(false);
-    setIsPlaying(true);
+  const handleClaimAndClose = () => {
+    if (!isCompleted && remainingSeconds > 0) return;
+    try {
+      if (trackerRef.current) {
+        if (!trackerRef.current.isComplete) {
+          trackerRef.current.tick(durationSeconds);
+        }
+        const proof = trackerRef.current.generateCompletionProof();
+        onAdCompleteRef.current(proof);
+      }
+    } catch {
+      // Ignore if already generated
+    }
+    onClose?.();
   };
 
-  const progressPercent = Math.min(100, Math.round((watchedSeconds / durationSeconds) * 100));
-
-  // If completed, render verified subsidy badge
-  if (isCompleted) {
-    return (
-      <div className="w-full bg-emerald-50 border border-emerald-200/80 rounded-2xl p-4 transition-all">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-naka-green text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-naka-dark flex items-center gap-1.5 font-sans">
-                <span>Gas Fee Sponsored</span>
-                <span className="text-[10px] font-mono text-naka-green bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
-                  $0.00 GAS
-                </span>
-              </div>
-              <p className="text-[11px] text-naka-muted font-sans mt-0.5">
-                Arc gas subsidized by <strong className="text-naka-dark font-medium">{brandName}</strong>. Ready to sign.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              type="button"
-              onClick={handleRestart}
-              className="flex items-center space-x-1 px-3 py-1.5 rounded-full text-[11px] font-mono text-naka-muted hover:text-naka-dark bg-white border border-naka-border hover:border-naka-dark/30 transition-all cursor-pointer shadow-2xs"
-              title="Replay Video"
-            >
-              <RefreshCw className="w-3 h-3 text-naka-muted" />
-              <span>Replay</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const progressPercent = Math.min(
+    100,
+    Math.round(((durationSeconds - remainingSeconds) / durationSeconds) * 100)
+  );
 
   return (
-    <div className="w-full bg-white border border-naka-border rounded-2xl overflow-hidden shadow-sm transition-all duration-300">
-      {/* Spotlight Header Bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-naka-border bg-naka-surface">
-        <div className="flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full bg-naka-orange animate-pulse" />
-          <span className="text-[10px] font-mono font-semibold tracking-wider uppercase text-naka-dark">
-            SPONSOR SPOTLIGHT
-          </span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1.5 text-[10px] font-mono text-naka-muted bg-white px-2.5 py-0.5 rounded-full border border-naka-border">
-            <ShieldCheck className="w-3 h-3 text-naka-orange" />
-            <span>{brandName.toUpperCase()}</span>
+    /* Modal Backdrop Overlay: centered, non-fixed positioning on page */
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sponsor-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-6 animate-in fade-in duration-200"
+    >
+      {/* 70% Viewport Modal Container */}
+      <div className="relative w-[92vw] md:w-[70vw] max-w-4xl h-[70vh] min-h-[460px] max-h-[640px] bg-neutral-950 border border-neutral-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden select-none">
+        
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-5 py-3.5 bg-neutral-900/90 border-b border-neutral-800/80 z-20">
+          <div className="flex items-center space-x-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-naka-orange animate-pulse" />
+            <span id="sponsor-modal-title" className="text-xs font-mono font-bold tracking-wider uppercase text-white">
+              SPONSOR SPOTLIGHT
+            </span>
+            <div className="hidden sm:flex items-center space-x-1.5 text-[11px] font-mono text-neutral-300 bg-neutral-800/80 px-2.5 py-0.5 rounded-full border border-neutral-700">
+              <ShieldCheck className="w-3.5 h-3.5 text-naka-orange" />
+              <span>{brandName}</span>
+            </div>
           </div>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-xs text-naka-muted hover:text-naka-dark font-mono px-1.5"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* Video Viewport / Canvas */}
-      <div className="relative aspect-video w-full bg-naka-dark text-white flex flex-col items-center justify-center select-none overflow-hidden">
-        {/* Render Real Media if Available */}
-        {media.kind === 'youtube' && isPlaying ? (
-          <iframe
-            src={media.embedUrl}
-            title={adTitle}
-            className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
-        ) : media.kind === 'instagram' && isPlaying ? (
-          <iframe
-            src={media.embedUrl}
-            title={adTitle}
-            className="w-full h-full border-0"
-            allow="autoplay; encrypted-media"
-          />
-        ) : media.kind === 'direct' && isPlaying ? (
-          <video
-            src={media.embedUrl}
-            autoPlay
-            muted={isMuted}
-            playsInline
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          /* Sleek Styled Spotlight Canvas */
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 bg-gradient-to-b from-neutral-900 via-neutral-950 to-black">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#222_1px,transparent_1px),linear-gradient(to_bottom,#222_1px,transparent_1px)] bg-[size:1.5rem_1.5rem] opacity-30 pointer-events-none" />
+          <div className="flex items-center space-x-3">
+            {/* Reverse Countdown Indicator (30 -> 1 -> 0) */}
+            {remainingSeconds > 0 ? (
+              <div className="flex items-center space-x-2 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full font-mono text-xs text-amber-300 shadow-inner">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                <span className="font-bold">{remainingSeconds}s</span>
+                <span className="text-[10px] text-amber-200/70 hidden xs:inline">remaining</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1.5 px-3 py-1 bg-emerald-500/15 border border-emerald-500/40 rounded-full font-mono text-xs text-emerald-400">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="font-bold">Verified ($0 Gas)</span>
+              </div>
+            )}
 
-            <button
-              type="button"
-              onClick={handleTogglePlay}
-              className="w-14 h-14 rounded-full bg-naka-orange hover:bg-naka-orange-hover text-white shadow-xl flex items-center justify-center mb-3 cursor-pointer transform hover:scale-105 active:scale-95 transition-all duration-200"
-              aria-label={isPlaying ? 'Pause Video' : 'Play Video'}
-            >
-              {isPlaying ? (
-                <Pause className="w-6 h-6 fill-white" />
-              ) : (
-                <Play className="w-6 h-6 translate-x-0.5 fill-white" />
-              )}
-            </button>
-
-            <h4 className="text-sm sm:text-base font-bold text-white tracking-tight font-display max-w-sm">
-              {adTitle}
-            </h4>
-
-            <p className="mt-1 text-xs text-neutral-400 font-sans">
-              Watch sponsor spotlight to unlock $0 gas fees
-            </p>
-
-            {videoUrl && (
-              <a
-                href={videoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 text-[10px] font-mono text-neutral-400 hover:text-white flex items-center space-x-1 underline"
+            {/* Cross Button: Strictly hidden until timer hits 0 */}
+            {remainingSeconds === 0 ? (
+              <button
+                type="button"
+                onClick={handleClaimAndClose}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                title="Claim Gas Subsidy and Close"
+                aria-label="Close sponsor ad"
               >
-                <span>YouTube Link</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+                <X className="w-4 h-4" />
+              </button>
+            ) : (
+              <div
+                className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-600 flex items-center justify-center cursor-not-allowed"
+                title="Watch at least 30 seconds to close"
+              >
+                <X className="w-4 h-4 opacity-40" />
+              </div>
             )}
           </div>
-        )}
+        </div>
 
-        {/* Video Overlay Progress Bar & Countdown (Always visible while playing) */}
-        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent p-3 flex flex-col space-y-1.5 z-20">
-          <div className="relative w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
+        {/* Video Canvas Viewport */}
+        <div className="relative flex-1 w-full bg-black text-white flex flex-col items-center justify-center overflow-hidden">
+          {media.kind === 'youtube' ? (
+            <iframe
+              ref={iframeRef}
+              src={media.embedUrl}
+              title={adTitle}
+              className="w-full h-full border-0 pointer-events-auto"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          ) : media.kind === 'direct' ? (
+            <video
+              ref={videoRef}
+              src={media.embedUrl}
+              autoPlay
+              muted={isMuted}
+              loop
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-center p-6 text-neutral-400 font-sans">
+              <p className="text-sm">Video media loading...</p>
+            </div>
+          )}
+
+          {/* Single Audio Control Button (Unmute / Mute) */}
+          <div className="absolute top-4 left-4 z-30">
+            <button
+              type="button"
+              onClick={handleToggleMute}
+              className="flex items-center space-x-2 px-3.5 py-2 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 backdrop-blur-md transition-all text-xs font-sans font-medium cursor-pointer active:scale-95 shadow-lg"
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isMuted ? (
+                <>
+                  <VolumeX className="w-4 h-4 text-amber-400" />
+                  <span>Unmute Audio</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-4 h-4 text-emerald-400" />
+                  <span>Mute Audio</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Reverse Timer Badge floating over video */}
+          {remainingSeconds > 0 && (
+            <div className="absolute bottom-5 right-5 z-30 pointer-events-none">
+              <div className="flex items-center space-x-2 px-4 py-2 rounded-2xl bg-black/75 border border-white/15 backdrop-blur-md text-white font-mono text-xs shadow-xl">
+                <span className="text-neutral-400">Unlock Gas in:</span>
+                <span className="text-naka-orange font-bold text-sm tracking-wide">
+                  {remainingSeconds}s
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Progress Bar & Completion Action Footer */}
+        <div className="bg-neutral-900 border-t border-neutral-800 z-20">
+          {/* Reverse Progress Strip */}
+          <div className="relative w-full h-1 bg-neutral-800">
             <div
-              className="h-full transition-all duration-500 ease-linear bg-naka-orange"
+              className={`h-full transition-all duration-1000 ease-linear ${
+                remainingSeconds === 0 ? 'bg-emerald-500' : 'bg-naka-orange'
+              }`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-neutral-300 pt-0.5 font-mono">
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                onClick={handleTogglePlay}
-                className="hover:text-white transition-colors cursor-pointer"
-              >
-                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsMuted((prev) => !prev)}
-                className="hover:text-white transition-colors cursor-pointer"
-              >
-                {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-              </button>
-              <span>
-                {progressPercent}% watched
-              </span>
+          {/* Footer Bar */}
+          <div className="flex items-center justify-between px-5 py-3">
+            <div className="flex items-center space-x-2 text-xs font-mono text-neutral-400">
+              {remainingSeconds > 0 ? (
+                <span>
+                  Must watch <strong className="text-white">30 seconds</strong> for Arc gas sponsorship
+                </span>
+              ) : (
+                <span className="text-emerald-400 font-semibold flex items-center space-x-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>30s requirement satisfied! Gas sponsorship active.</span>
+                </span>
+              )}
             </div>
 
-            <span className="font-semibold text-naka-orange animate-pulse">
-              {progressPercent < 100 ? 'Watching Sponsor Video...' : 'Verified!'}
-            </span>
+            {remainingSeconds === 0 ? (
+              <button
+                type="button"
+                onClick={handleClaimAndClose}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs font-sans tracking-wide transition-all cursor-pointer shadow-lg active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 fill-black" />
+                <span>Claim $0 Gas & Close</span>
+              </button>
+            ) : (
+              <div className="text-[11px] font-mono text-neutral-500">
+                Close button unlocks at 0s
+              </div>
+            )}
           </div>
         </div>
+
       </div>
     </div>
   );
