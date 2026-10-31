@@ -49,7 +49,7 @@ function parseMediaSource(rawUrl?: string): {
   if (ytMatch && ytMatch[1]) {
     return {
       kind: 'youtube',
-      embedUrl: `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=1&mute=1&controls=1&playsinline=1&modestbranding=1&rel=0`,
+      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&controls=1&playsinline=1&modestbranding=1&rel=0`,
       originalUrl: url,
     };
   }
@@ -90,9 +90,16 @@ export function VideoAdPlayer({
   const [watchedSeconds, setWatchedSeconds] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(isUnlocked);
 
-  const trackerRef = useRef<AdSessionTracker>(
-    new AdSessionTracker({ campaignId, brandName, durationSeconds })
-  );
+  const trackerRef = useRef<AdSessionTracker | null>(null);
+  if (!trackerRef.current) {
+    trackerRef.current = new AdSessionTracker({ campaignId, brandName, durationSeconds });
+  }
+
+  const onAdCompleteRef = useRef(onAdComplete);
+  onAdCompleteRef.current = onAdComplete;
+
+  const onPlayStateChangeRef = useRef(onPlayStateChange);
+  onPlayStateChangeRef.current = onPlayStateChange;
 
   const media = parseMediaSource(videoUrl);
 
@@ -108,11 +115,10 @@ export function VideoAdPlayer({
     }
   }, [isUnlocked, isCompleted]);
 
-  const remainingSeconds = Math.max(0, durationSeconds - watchedSeconds);
-
+  // Notify parent only when playing state actually transitions
   useEffect(() => {
-    onPlayStateChange?.(isPlaying, remainingSeconds);
-  }, [isPlaying, remainingSeconds, onPlayStateChange]);
+    onPlayStateChangeRef.current?.(isPlaying, Math.max(0, durationSeconds - watchedSeconds));
+  }, [isPlaying, durationSeconds, watchedSeconds]);
 
   // Handle timer countdown during active playback
   useEffect(() => {
@@ -120,6 +126,7 @@ export function VideoAdPlayer({
     if (isPlaying && !isCompleted) {
       interval = setInterval(() => {
         const tracker = trackerRef.current;
+        if (!tracker) return;
         tracker.tick(1);
         setWatchedSeconds(tracker.watchedSeconds);
 
@@ -128,7 +135,7 @@ export function VideoAdPlayer({
           setIsCompleted(true);
           try {
             const proof = tracker.generateCompletionProof();
-            onAdComplete(proof);
+            onAdCompleteRef.current(proof);
           } catch (err) {
             console.error('Failed to issue completion proof:', err);
           }
@@ -139,7 +146,7 @@ export function VideoAdPlayer({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPlaying, isCompleted, onAdComplete]);
+  }, [isPlaying, isCompleted]);
 
   const handleTogglePlay = () => {
     if (isCompleted) return;
@@ -228,7 +235,8 @@ export function VideoAdPlayer({
             src={media.embedUrl}
             title={adTitle}
             className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
           />
         ) : media.kind === 'instagram' && isPlaying ? (
           <iframe

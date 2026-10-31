@@ -436,10 +436,7 @@ export function TransferForm({
               adTitle={`${effectiveBrandName} Spotlight`}
               videoUrl={effectiveVideoUrl}
               durationSeconds={durationSeconds}
-              isPlayingOverride={isAdPlaying}
-              onPlayStateChange={(playing) => {
-                setIsAdPlaying(playing);
-              }}
+              autoStart={true}
               onAdComplete={(proof) => {
                 setIsAdPlaying(false);
                 onAdComplete(proof);
