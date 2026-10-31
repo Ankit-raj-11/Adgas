@@ -252,6 +252,19 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
       s: (attestation.s && attestation.s.startsWith('0x') && attestation.s.length === 66 ? attestation.s : toBytes32(attestation.s || '0x0')) as `0x${string}`,
     };
 
+    // Fetch live network gas price to ensure tx.gasprice > 0 for Arc execution & simulation
+    let networkGasPrice = 25_000_000_000n; // 25 Gwei fallback
+    try {
+      if (typeof arcClient?.publicClient?.getGasPrice === 'function') {
+        const livePrice = await arcClient.publicClient.getGasPrice();
+        if (livePrice && livePrice > 0n) {
+          networkGasPrice = livePrice;
+        }
+      }
+    } catch {
+      // fallback to 25 Gwei
+    }
+
     // 8. Simulation on Arc Mainnet via AdgasSponsorVault.executeSponsoredTransfer
     try {
       await arcClient.publicClient.simulateContract({
@@ -260,11 +273,9 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
         functionName: 'executeSponsoredTransfer',
         args: [campaignIdBytes32, authTuple, attestationTuple],
         account: arcClient.relayerAccount,
+        gasPrice: networkGasPrice,
       });
     } catch (simErr: any) {
-      if (db?.consumeAttestation) {
-        await db.consumeAttestation(attestationNonce);
-      }
       await accountingEngine.releaseReservation({
         campaignId: dbCampaignId,
         reservationId: reservation.reservationId,
@@ -290,6 +301,7 @@ export const relayRoutes: FastifyPluginAsync<RelayRouteOptions> = async (app, op
         functionName: 'executeSponsoredTransfer',
         args: [campaignIdBytes32, authTuple, attestationTuple],
         account: arcClient.relayerAccount,
+        gasPrice: networkGasPrice,
       });
 
       await recoveryManager.recordBroadcast(attempt.id, txHash);
