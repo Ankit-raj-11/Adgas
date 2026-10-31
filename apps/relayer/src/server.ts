@@ -12,6 +12,13 @@ import { campaignRoutes } from './routes/campaignRoutes.js';
 import { MemoryDatabase } from './db/memoryStore.js';
 import { PostgresDatabase } from './db/postgresStore.js';
 
+// Ensure BigInt can be safely serialized to JSON across all endpoints
+if (!(BigInt.prototype as any).toJSON) {
+  (BigInt.prototype as any).toJSON = function () {
+    return this.toString();
+  };
+}
+
 export interface BuildAppOptions {
   arcClient?: ReturnType<typeof createArcClient>;
   db?: any;

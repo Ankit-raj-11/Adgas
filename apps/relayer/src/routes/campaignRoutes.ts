@@ -7,6 +7,25 @@ export interface CampaignRouteOptions {
   db: any;
 }
 
+function formatCampaignResponse(c: any) {
+  if (!c) return null;
+  return {
+    id: c.id,
+    sponsorAddress: c.sponsorAddress,
+    name: c.name,
+    videoUrl: c.videoUrl || '',
+    totalFundedUsdcUnits: (c.totalFundedUsdcUnits ?? c.totalFundedUsdc ?? '0').toString(),
+    availableBalanceUsdcUnits: (c.availableBalanceUsdcUnits ?? c.availableBalanceUsdc ?? '0').toString(),
+    reservedBalanceUsdcUnits: (c.reservedBalanceUsdcUnits ?? c.reservedBalanceUsdc ?? '0').toString(),
+    settledSpendUsdcUnits: (c.settledSpendUsdcUnits ?? c.settledSpendUsdc ?? '0').toString(),
+    maxGasPerTxUsdcUnits: (c.maxGasPerTxUsdcUnits ?? c.maxGasPerTxUsdc ?? '50000').toString(),
+    status: c.status || 'active',
+    sponsoredTxCount: Number(c.sponsoredTxCount || 0),
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+}
+
 export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (app, opts) => {
   const { arcClient, db } = opts;
 
@@ -46,15 +65,7 @@ export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (a
   app.get('/api/campaigns', async (_request, reply) => {
     const campaigns = db?.listCampaigns ? await db.listCampaigns() : [];
     return reply.status(200).send({
-      campaigns: campaigns.map((c: any) => ({
-        ...c,
-        videoUrl: c.videoUrl || '',
-        totalFundedUsdcUnits: c.totalFundedUsdcUnits?.toString(),
-        availableBalanceUsdcUnits: c.availableBalanceUsdcUnits?.toString(),
-        reservedBalanceUsdcUnits: c.reservedBalanceUsdcUnits?.toString(),
-        settledSpendUsdcUnits: c.settledSpendUsdcUnits?.toString(),
-        maxGasPerTxUsdcUnits: c.maxGasPerTxUsdcUnits?.toString(),
-      })),
+      campaigns: campaigns.map((c: any) => formatCampaignResponse(c)),
     });
   });
 
@@ -69,15 +80,7 @@ export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (a
     }
 
     return reply.status(200).send({
-      campaign: {
-        ...campaign,
-        videoUrl: campaign.videoUrl || '',
-        totalFundedUsdcUnits: campaign.totalFundedUsdcUnits?.toString(),
-        availableBalanceUsdcUnits: campaign.availableBalanceUsdcUnits?.toString(),
-        reservedBalanceUsdcUnits: campaign.reservedBalanceUsdcUnits?.toString(),
-        settledSpendUsdcUnits: campaign.settledSpendUsdcUnits?.toString(),
-        maxGasPerTxUsdcUnits: campaign.maxGasPerTxUsdcUnits?.toString(),
-      },
+      campaign: formatCampaignResponse(campaign),
     });
   });
 
@@ -130,15 +133,7 @@ export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (a
     }
 
     return reply.status(201).send({
-      campaign: {
-        ...newCampaign,
-        videoUrl: newCampaign.videoUrl,
-        totalFundedUsdcUnits: newCampaign.totalFundedUsdcUnits.toString(),
-        availableBalanceUsdcUnits: newCampaign.availableBalanceUsdcUnits.toString(),
-        reservedBalanceUsdcUnits: newCampaign.reservedBalanceUsdcUnits.toString(),
-        settledSpendUsdcUnits: newCampaign.settledSpendUsdcUnits.toString(),
-        maxGasPerTxUsdcUnits: newCampaign.maxGasPerTxUsdcUnits.toString(),
-      },
+      campaign: formatCampaignResponse(newCampaign),
     });
   });
 
@@ -166,14 +161,7 @@ export const campaignRoutes: FastifyPluginAsync<CampaignRouteOptions> = async (a
     }
 
     return reply.status(200).send({
-      campaign: {
-        ...updated,
-        totalFundedUsdcUnits: updated.totalFundedUsdcUnits?.toString(),
-        availableBalanceUsdcUnits: updated.availableBalanceUsdcUnits?.toString(),
-        reservedBalanceUsdcUnits: updated.reservedBalanceUsdcUnits?.toString(),
-        settledSpendUsdcUnits: updated.settledSpendUsdcUnits?.toString(),
-        maxGasPerTxUsdcUnits: updated.maxGasPerTxUsdcUnits?.toString(),
-      },
+      campaign: formatCampaignResponse(updated),
     });
   });
 
