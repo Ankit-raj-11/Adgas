@@ -2,6 +2,7 @@ import { type FastifyPluginAsync } from 'fastify';
 import { randomBytes } from 'node:crypto';
 import {
   isAddress,
+  getAddress,
   isHex,
   padHex,
   stringToHex,
@@ -106,6 +107,20 @@ export const attestationRoutes: FastifyPluginAsync<AttestationRouteOptions> = as
       });
     }
 
+    let normalizedUser: `0x${string}`;
+    let normalizedRecipient: `0x${string}`;
+    let normalizedVault: `0x${string}`;
+    try {
+      normalizedUser = getAddress(userAddress);
+      normalizedRecipient = getAddress(recipientAddress);
+      normalizedVault = getAddress(vaultAddress);
+    } catch {
+      return reply.status(400).send({
+        error: 'ValidationError',
+        message: 'Invalid EVM address format for userAddress or recipientAddress',
+      });
+    }
+
     let amount: bigint;
     try {
       amount = BigInt(amountUsdcUnits);
@@ -166,10 +181,10 @@ export const attestationRoutes: FastifyPluginAsync<AttestationRouteOptions> = as
 
     // 7. Typed Data Construction & Relayer Signature
     const typedData = buildSponsorshipAttestationTypedData({
-      vaultAddress: vaultAddress as `0x${string}`,
+      vaultAddress: normalizedVault,
       campaignId: campaignIdBytes32,
-      user: userAddress as `0x${string}`,
-      recipient: recipientAddress as `0x${string}`,
+      user: normalizedUser,
+      recipient: normalizedRecipient,
       amountUsdc: amount,
       userNonce: formattedUserNonce,
       validAfter,
@@ -192,10 +207,10 @@ export const attestationRoutes: FastifyPluginAsync<AttestationRouteOptions> = as
       campaignId: campaign.id || campaignId,
       campaignIdBytes32,
       originalCampaignId: campaign.id || campaignId,
-      user: userAddress as `0x${string}`,
-      userAddress,
-      recipient: recipientAddress as `0x${string}`,
-      recipientAddress,
+      user: normalizedUser,
+      userAddress: normalizedUser,
+      recipient: normalizedRecipient,
+      recipientAddress: normalizedRecipient,
       amountUsdc: amount.toString(),
       amountUsdcUnits: amount.toString(),
       userNonce: formattedUserNonce,

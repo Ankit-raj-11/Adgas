@@ -1,7 +1,7 @@
 import { pgTable, varchar, numeric, timestamp, bigint, text } from 'drizzle-orm/pg-core';
 
 export const campaigns = pgTable('campaigns', {
-  id: varchar('id', { length: 36 }).primaryKey(),
+  id: varchar('id', { length: 128 }).primaryKey(),
   sponsorAddress: varchar('sponsor_address', { length: 42 }).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   videoUrl: text('video_url'),
@@ -16,8 +16,8 @@ export const campaigns = pgTable('campaigns', {
 });
 
 export const deposits = pgTable('deposits', {
-  id: varchar('id', { length: 36 }).primaryKey(),
-  campaignId: varchar('campaign_id', { length: 36 }).notNull().references(() => campaigns.id),
+  id: varchar('id', { length: 128 }).primaryKey(),
+  campaignId: varchar('campaign_id', { length: 128 }).notNull().references(() => campaigns.id),
   sponsorAddress: varchar('sponsor_address', { length: 42 }).notNull(),
   txHash: varchar('tx_hash', { length: 66 }).notNull().unique(),
   amountUsdc: numeric('amount_usdc').notNull(),
@@ -26,8 +26,8 @@ export const deposits = pgTable('deposits', {
 });
 
 export const attestations = pgTable('attestations', {
-  nonce: varchar('nonce', { length: 64 }).primaryKey(), // UUID
-  campaignId: varchar('campaign_id', { length: 36 }).notNull().references(() => campaigns.id),
+  nonce: varchar('nonce', { length: 128 }).primaryKey(), // bytes32 hex or UUID
+  campaignId: varchar('campaign_id', { length: 128 }).notNull().references(() => campaigns.id),
   userAddress: varchar('user_address', { length: 42 }).notNull(),
   recipientAddress: varchar('recipient_address', { length: 42 }).notNull(),
   amountUsdc: numeric('amount_usdc').notNull(),
@@ -38,9 +38,9 @@ export const attestations = pgTable('attestations', {
 });
 
 export const transactions = pgTable('transactions', {
-  id: varchar('id', { length: 36 }).primaryKey(),
-  attestationNonce: varchar('attestation_nonce', { length: 64 }).notNull().references(() => attestations.nonce),
-  campaignId: varchar('campaign_id', { length: 36 }).notNull().references(() => campaigns.id),
+  id: varchar('id', { length: 128 }).primaryKey(),
+  attestationNonce: varchar('attestation_nonce', { length: 128 }).notNull().references(() => attestations.nonce),
+  campaignId: varchar('campaign_id', { length: 128 }).notNull().references(() => campaigns.id),
   userAddress: varchar('user_address', { length: 42 }).notNull(),
   recipientAddress: varchar('recipient_address', { length: 42 }).notNull(),
   amountUsdc: numeric('amount_usdc').notNull(),

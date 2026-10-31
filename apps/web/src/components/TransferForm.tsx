@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAccount, useSignTypedData, useConnect, useSwitchChain, useReadContract } from 'wagmi';
-import { isAddress } from 'viem';
+import { isAddress, getAddress } from 'viem';
 import {
   ArrowRight,
   ShieldCheck,
@@ -233,7 +233,7 @@ export function TransferForm({
     setErrorMessage(null);
 
     try {
-      const trimmedRecipient = recipient.trim() as `0x${string}`;
+      const trimmedRecipient = getAddress(recipient.trim());
       const amountUnitsStr = parsedAmountBigInt.toString();
       const currentCampaignId = activeSponsor?.id || campaignId;
       const currentBrand = activeSponsor?.name || brandName;
